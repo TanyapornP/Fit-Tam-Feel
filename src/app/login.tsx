@@ -2,7 +2,7 @@
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Btn, Field, LangToggle } from "../components/ui";
@@ -88,7 +88,10 @@ export default function Login() {
           <View style={{ alignSelf: "flex-end" }}>
             <LangToggle />
           </View>
-          <Text style={s.logo}>Fit-Tam-Feel</Text>
+          <Image source={require("../../assets/images/logo-mark.png")} style={s.mark} accessibilityLabel="Fit-Tam-Feel" />
+          <Text style={s.logo}>
+            Fit<Text style={{ color: COLORS.rose }}>-</Text>Tam<Text style={{ color: COLORS.rose }}>-</Text>Feel
+          </Text>
           <Text style={s.tag}>{t("appTag")}</Text>
           <Text style={s.sub}>{t("lockSub")}</Text>
 
@@ -144,7 +147,8 @@ export default function Login() {
 
 const s = StyleSheet.create({
   wrap: { padding: 24, alignItems: "center", flexGrow: 1 },
-  logo: { fontFamily: FONTS.headBold, fontSize: 38, letterSpacing: -0.5, color: COLORS.sageDark, marginTop: 20 },
+  mark: { width: 76, height: 76, borderRadius: 20, marginTop: 12, marginBottom: 6 },
+  logo: { fontFamily: FONTS.headBold, fontSize: 34, letterSpacing: -0.5, color: "#2E4A3A", marginTop: 6 },
   tag: { fontFamily: FONTS.body, letterSpacing: 1.5, fontSize: 11, color: COLORS.sage, marginTop: 2, textAlign: "center" },
   sub: { fontFamily: FONTS.body, textAlign: "center", color: COLORS.sub, fontSize: 14, lineHeight: 22, marginVertical: 18, maxWidth: 300 },
   tabs: { flexDirection: "row", backgroundColor: COLORS.pink, borderRadius: 16, padding: 4, marginBottom: 18 },
