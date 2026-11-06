@@ -63,7 +63,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [fetching, setFetching] = useState(false);
   const [reloadCount, setReloadCount] = useState(0);
   const [picked, setPicked] = useState<{ date: string; battery: number } | null>(null);
-  const [mode, setMode] = useState<Mode>("workout");
+  const [pickedMode, setMode] = useState<Mode | null>(null);
   const [rot, setRot] = useState<Record<string, number>>({});
   const [draft, setDraft] = useState<string | null>(null);
   const [dbNotifs, setDbNotifs] = useState<Notif[]>([]);
@@ -96,6 +96,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const mine = store.uid === userId; // ข้อมูลที่มีเป็นของผู้ใช้คนปัจจุบันหรือยัง
   const clips = mine ? store.clips : [];
   const logs = mine ? store.logs : [];
+  // โหมด: ถ้ายังไม่ได้กดเลือก ใช้โหมดที่ชอบจากโปรไฟล์
+  const mode: Mode = pickedMode ?? (profile?.preferred_workouts?.[0] === "dance" ? "dance" : "workout");
   // แบตวันนี้: ถ้ายังไม่ได้เลื่อนในวันนี้ ใช้ค่าปกติจากโปรไฟล์
   const battery = picked && picked.date === today ? picked.battery : profile?.energy_score ?? 50;
 

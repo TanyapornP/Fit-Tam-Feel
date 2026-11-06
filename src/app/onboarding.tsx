@@ -1,24 +1,31 @@
-// ตั้งค่าครั้งแรก 6 ขั้น → บันทึกลงตาราง profile
+// ตั้งค่าครั้งแรก 4 ขั้น (ถามเฉพาะที่แอปใช้จริง) → บันทึกลงตาราง profile
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import Avatar from "../components/Avatar";
 import BatterySlider from "../components/BatterySlider";
+import Icon from "../components/Icon";
 import { Btn, Chips, Field } from "../components/ui";
-import { DEFAULT_ANSWERS, birthYearCE, toProfilePatch, type Answers } from "../lib/answers";
+import { DEFAULT_ANSWERS, MODE_CHIPS, birthYearCE, chipMode, fromProfile, modeChip, toProfilePatch, type Answers } from "../lib/answers";
+import { uploadImage } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useT } from "../lib/i18n";
 import { tierOf } from "../lib/logic";
 import { ui } from "../lib/styles";
 import { COLORS, FONTS } from "../lib/theme";
 
-const STEPS = 6;
+const STEPS = 4;
 
 export default function Onboarding() {
   const { t } = useT();
-  const { profile, saveProfile } = useAuth();
+  const { userId, profile, saveProfile } = useAuth();
   const [step, setStep] = useState(0);
-  const [a, setA] = useState<Answers>({ ...DEFAULT_ANSWERS, nick: profile?.username ?? "" });
+  // เคยตอบแล้ว (กด "ตั้งค่าเริ่มต้นใหม่" จากโปรไฟล์) → เติมคำตอบเดิมให้ · ผู้ใช้ใหม่ → ค่าเริ่มต้น
+  const [a, setA] = useState<Answers>(() =>
+    profile?.activity_level ? fromProfile(profile) : { ...DEFAULT_ANSWERS, nick: profile?.username ?? "" },
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set =
@@ -26,10 +33,28 @@ export default function Onboarding() {
     (v: Answers[K]) =>
       setA((o) => ({ ...o, [k]: v }));
 
-  const dobFilled = a.yob.length === 4;
-  const dobOk = dobFilled && birthYearCE(a.yob) != null;
-  const canNext = step !== 0 || (a.nick.trim().length > 0 && dobOk);
-  const list = (arr: string[]) => (arr.length ? arr.map((k) => t(k)).join(", ") : "—");
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const yobFilled = a.yob.length === 4;
+  const yobOk = birthYearCE(a.yob) != null;
+  const canNext = step !== 0 || (a.nick.trim().length > 0 && yobOk);
+
+  // เลือกรูปโปรไฟล์ (ไม่บังคับ) → อัปโหลดขึ้น Storage แล้วบันทึกทันที
+  const pickPhoto = async () => {
+    setErr("");
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return setErr(t("errPhotoPerm"));
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.6 });
+      if (res.canceled || !res.assets[0] || !userId) return;
+      setPhotoBusy(true);
+      const url = await uploadImage("avatars", userId, res.assets[0].uri, res.assets[0].mimeType);
+      await saveProfile({ avatar_url: url });
+    } catch {
+      setErr(t("errPhoto"));
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   // บันทึก (กด "ข้าม" ก็บันทึกค่าที่มีอยู่ เพื่อไม่ต้องตอบซ้ำ)
   const finish = async () => {
@@ -70,10 +95,19 @@ export default function Onboarding() {
           <>
             <Text style={ui.h1}>{t("s0h")}</Text>
             <Text style={ui.p}>{t("s0p")}</Text>
+            <View style={s.photoWrap}>
+              <View>
+                <Avatar name={a.nick || profile?.username || null} uri={profile?.avatar_url} seed={userId ?? "me"} size={96} onPress={pickPhoto} />
+                <Pressable onPress={pickPhoto} style={s.camBadge} disabled={photoBusy}>
+                  <Icon name="camera" size={16} />
+                </Pressable>
+              </View>
+              <Text style={[ui.rowHint, { marginTop: 8 }]}>{photoBusy ? t("uploading") : t("photoOpt")}</Text>
+            </View>
             <Field label={t("nick")} value={a.nick} onChangeText={set("nick")} autoCapitalize="words" />
             <Text style={ui.label}>{t("dobQ")}</Text>
             <TextInput
-              style={s.dob}
+              style={s.yob}
               value={a.yob}
               onChangeText={(v) => set("yob")(v.replace(/\D/g, "").slice(0, 4))}
               placeholder={t("dobY")}
@@ -81,87 +115,50 @@ export default function Onboarding() {
               keyboardType="number-pad"
               maxLength={4}
             />
-            {dobFilled && !dobOk && <Text style={ui.err}>{t("dobErr")}</Text>}
+            {yobFilled && !yobOk && <Text style={ui.err}>{t("dobErr")}</Text>}
             <Text style={ui.label}>{t("actQ")}</Text>
             <Chips options={["act_new", "act_some", "act_reg"]} value={a.act} onChange={(v) => set("act")(v as string)} />
           </>
         )}
         {step === 1 && (
           <>
-            <Text style={ui.h1}>{t("s1h")}</Text>
-            <Text style={ui.p}>{t("s1p")}</Text>
-            <Text style={ui.label}>{t("dayQ")}</Text>
-            <Chips options={["day_work", "day_home", "day_mix", "day_shift"]} value={a.day} onChange={(v) => set("day")(v as string)} />
-            <Text style={ui.label}>{t("outQ")}</Text>
-            <Chips options={["out_4", "out_8", "out_12", "out_12p"]} value={a.out} onChange={(v) => set("out")(v as string)} />
-            <Text style={ui.label}>{t("freeQ")}</Text>
-            <Chips options={["fr_morning", "fr_afternoon", "fr_evening", "fr_night"]} value={a.free} onChange={(v) => set("free")(v as string)} />
-          </>
-        )}
-        {step === 2 && (
-          <>
             <Text style={ui.h1}>{t("s2h")}</Text>
             <Text style={ui.p}>{t("s2p")}</Text>
-            <Text style={ui.label}>{t("drainedQ")}</Text>
-            <Chips
-              options={["dr_morning", "dr_midday", "dr_after", "dr_evening", "dr_busy"]}
-              value={a.drained}
-              onChange={(v) => set("drained")(v as string[])}
-            />
+            <Text style={ui.label}>{t("modePrefQ")}</Text>
+            <Chips options={MODE_CHIPS} value={modeChip(a.mode)} onChange={(v) => set("mode")(chipMode(v as string))} />
+            <Text style={[ui.hint, { textAlign: "left" }]}>{t("modePrefWhy")}</Text>
             <Text style={ui.label}>{t("batteryQ")}</Text>
             <Text style={ui.big}>{a.battery}%</Text>
             <BatterySlider value={a.battery} onChange={set("battery")} />
-            <Text style={[ui.mid, { marginBottom: 6 }]}>{t("lv_" + tierOf(a.battery))}</Text>
-            <Text style={ui.label}>{t("sleepQ")}</Text>
-            <Chips options={["sl_u5", "sl_56", "sl_67", "sl_78", "sl_8p"]} value={a.sleep} onChange={(v) => set("sleep")(v as string)} />
-          </>
-        )}
-        {step === 3 && (
-          <>
-            <Text style={ui.h1}>{t("s3h")}</Text>
-            <Text style={ui.p}>{t("s3p")}</Text>
-            <Text style={ui.label}>{t("typesQ")}</Text>
-            <Chips options={["c_stretch", "c_yoga", "c_dance", "c_cardio", "c_strength"]} value={a.cats} onChange={(v) => set("cats")(v as string[])} />
+            <Text style={ui.mid}>{t("lv_" + tierOf(a.battery))}</Text>
+            <Text style={ui.hint}>{t("batteryWhy")}</Text>
             <Text style={ui.label}>{t("lenQ")}</Text>
             <Chips options={["d5", "d10", "d15", "d20"]} value={a.durs} onChange={(v) => set("durs")(v as string[])} />
-            <Text style={ui.label}>{t("whereQ")}</Text>
-            <Chips options={["w_bed", "w_room", "w_living", "w_out"]} value={a.where} onChange={(v) => set("where")(v as string)} />
-            <Text style={ui.label}>{t("limitQ")}</Text>
-            <Chips options={["l_none", "l_knee", "l_back", "l_wrist", "l_neck"]} value={a.limits} onChange={(v) => set("limits")(v as string[])} />
+            <Text style={[ui.hint, { textAlign: "left" }]}>{t("lenWhy")}</Text>
           </>
         )}
-        {step === 4 && (
+        {step === 2 && (
           <>
             <Text style={ui.h1}>{t("s4h")}</Text>
             <Text style={ui.p}>{t("s4p")}</Text>
             <Text style={ui.label}>{t("goalQ")}</Text>
             <Chips options={["g2", "g3", "g5", "g7"]} value={a.goal} onChange={(v) => set("goal")(v as string)} />
-            <Text style={ui.label}>{t("remindQ")}</Text>
-            <Chips options={["r5", "r7", "r9", "r0"]} value={a.remind} onChange={(v) => set("remind")(v as string)} />
-            <Text style={ui.label}>{t("whyQ")}</Text>
-            <Chips options={["y_feel", "y_sleep", "y_cons", "y_stress"]} value={a.why} onChange={(v) => set("why")(v as string[])} />
-            <View style={s.switchRow}>
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={ui.name}>{t("selfieT")}</Text>
-                <Text style={ui.p2}>{t("selfieS")}</Text>
-              </View>
-              <Switch value={a.selfie} onValueChange={set("selfie")} trackColor={{ true: COLORS.sage, false: COLORS.line }} />
-            </View>
+            <Text style={[ui.hint, { textAlign: "left" }]}>{t("goalWhy")}</Text>
           </>
         )}
-        {step === 5 && (
+        {step === 3 && (
           <>
             <Text style={ui.h1}>{t("s5h", { name: a.nick })}</Text>
             <Text style={ui.p}>{t("s5p")}</Text>
             <View style={ui.card}>
               {[
-                [t("sumRoutine"), t(a.day) + " · " + t(a.out)],
-                [t("sumFree"), t(a.free)],
+                [t("sumName"), a.nick],
+                [t("sumYob"), a.yob],
+                [t("sumAct"), t(a.act)],
+                [t("sumMode"), t(modeChip(a.mode))],
                 [t("sumBattery"), a.battery + "%"],
-                [t("sumLikes"), list(a.cats)],
-                [t("sumSessions"), list(a.durs)],
+                [t("sumSessions"), a.durs.length ? a.durs.map((d) => t(d)).join(", ") : "—"],
                 [t("sumGoal"), t("perWeek", { x: t(a.goal) })],
-                [t("sumRemind"), t(a.remind)],
               ].map(([k, v]) => (
                 <View key={k} style={ui.sumRow}>
                   <Text style={ui.sumK}>{k}</Text>
@@ -182,10 +179,21 @@ export default function Onboarding() {
 }
 
 const s = StyleSheet.create({
-  top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingTop: 14, paddingBottom: 10 },
-  progressWrap: { height: 6, backgroundColor: COLORS.pink, marginHorizontal: 22, borderRadius: 3 },
-  progressBar: { height: 6, backgroundColor: COLORS.sage, borderRadius: 3 },
-  dob: {
+  photoWrap: { alignItems: "center", marginTop: 6, marginBottom: 14 },
+  camBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  yob: {
     backgroundColor: COLORS.bg,
     borderRadius: 14,
     borderWidth: 1,
@@ -194,18 +202,10 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: COLORS.text,
-    textAlign: "center",
     fontFamily: FONTS.body,
   },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 18,
-    borderWidth: 1,
-    borderColor: COLORS.line,
-  },
+  top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingTop: 14, paddingBottom: 10 },
+  progressWrap: { height: 6, backgroundColor: COLORS.pink, marginHorizontal: 22, borderRadius: 3 },
+  progressBar: { height: 6, backgroundColor: COLORS.sage, borderRadius: 3 },
   bottom: { padding: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: "rgba(255,244,246,0.9)" },
 });

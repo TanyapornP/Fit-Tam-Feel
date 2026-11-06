@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Avatar from "../../components/Avatar";
 import Icon, { type IconName } from "../../components/Icon";
 import { Chips, ErrorBox, Field, LangToggle, LoadingView } from "../../components/ui";
-import { fromProfile, toProfilePatch, type Answers } from "../../lib/answers";
+import { MODE_CHIPS, chipMode, fromProfile, modeChip, toProfilePatch, type Answers } from "../../lib/answers";
 import { uploadImage } from "../../lib/api";
 import { useAuth } from "../../lib/AuthContext";
 import { useData } from "../../lib/DataContext";
@@ -276,30 +276,24 @@ export default function ProfileScreen() {
         <View style={ui.card}>
           {editing ? (
             <>
-              <Text style={ui.label}>{t("typesQ")}</Text>
-              <Chips options={["c_stretch", "c_yoga", "c_dance", "c_cardio", "c_strength"]} value={a.cats} onChange={(v) => set("cats")(v as string[])} />
+              <Text style={ui.label}>{t("actQ")}</Text>
+              <Chips options={["act_new", "act_some", "act_reg"]} value={a.act} onChange={(v) => set("act")(v as string)} />
+              <Text style={ui.label}>{t("modePrefQ")}</Text>
+              <Chips options={MODE_CHIPS} value={modeChip(a.mode)} onChange={(v) => set("mode")(chipMode(v as string))} />
               <Text style={ui.label}>{t("lenQ")}</Text>
               <Chips options={["d5", "d10", "d15", "d20"]} value={a.durs} onChange={(v) => set("durs")(v as string[])} />
-              <Text style={ui.label}>{t("whereQ")}</Text>
-              <Chips options={["w_bed", "w_room", "w_living", "w_out"]} value={a.where} onChange={(v) => set("where")(v as string)} />
-              <Text style={ui.label}>{t("limitQ")}</Text>
-              <Chips options={["l_none", "l_knee", "l_back", "l_wrist", "l_neck"]} value={a.limits} onChange={(v) => set("limits")(v as string[])} />
               <Text style={ui.label}>{t("goalQ")}</Text>
               <Chips options={["g2", "g3", "g5", "g7"]} value={a.goal} onChange={(v) => set("goal")(v as string)} />
-              <Text style={ui.label}>{t("remindQ")}</Text>
-              <Chips options={["r5", "r7", "r9", "r0"]} value={a.remind} onChange={(v) => set("remind")(v as string)} />
               <Pressable onPress={save} disabled={busy} style={[s.myPosts, { alignSelf: "flex-start" }]}>
                 <Text style={s.myPostsText}>{t("save")}</Text>
               </Pressable>
             </>
           ) : (
             [
-              [t("sumLikes"), list(a.cats)],
+              [t("actQ"), t(a.act)],
+              [t("sumMode"), t(modeChip(a.mode))],
               [t("sumSessions"), list(a.durs)],
-              [t("whereQ"), t(a.where)],
-              [t("limitQ"), list(a.limits)],
               [t("sumGoal"), t("perWeek", { x: t(a.goal) })],
-              [t("sumRemind"), t(a.remind)],
             ].map(([k, v]) => (
               <View key={k} style={ui.sumRow}>
                 <Text style={ui.sumK}>{k}</Text>
@@ -331,6 +325,15 @@ export default function ProfileScreen() {
             <Text style={ui.name}>{t("language")}</Text>
             <LangToggle />
           </View>
+          <Pressable
+            onPress={() => saveProfile({ onboarding_completed: false }).catch(() => setMsg(t("saveFail")))}
+            style={[ui.sumRow, { borderBottomWidth: 0 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={ui.name}>{t("redoSetup")}</Text>
+              <Text style={ui.p2}>{t("redoSetupS")}</Text>
+            </View>
+          </Pressable>
           <Pressable onPress={signOut} style={[s.myPosts, { alignSelf: "stretch", marginTop: 12 }]}>
             <Text style={[s.myPostsText, { textAlign: "center" }]}>{t("logout")}</Text>
           </Pressable>
