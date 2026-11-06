@@ -4,12 +4,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useData } from "../lib/DataContext";
 import { COLORS } from "../lib/theme";
+import Icon from "./Icon";
 
 export default function Bell() {
   const { unread } = useData();
   return (
     <Pressable onPress={() => router.push("/notifications")} style={s.bell} accessibilityLabel="notifications">
-      <Text style={{ fontSize: 20 }}>🔔</Text>
+      <Icon name="bell" size={22} />
       {unread > 0 && (
         <View style={s.badge}>
           <Text style={s.badgeText}>{unread > 9 ? "9+" : unread}</Text>

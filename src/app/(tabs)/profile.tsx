@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Avatar from "../../components/Avatar";
+import Icon, { type IconName } from "../../components/Icon";
 import { Chips, ErrorBox, Field, LangToggle, LoadingView } from "../../components/ui";
 import { fromProfile, toProfilePatch, type Answers } from "../../lib/answers";
 import { uploadImage } from "../../lib/api";
@@ -127,7 +128,7 @@ export default function ProfileScreen() {
           <View style={{ marginBottom: 10 }}>
             <Avatar name={profile.username} uri={profile.avatar_url} seed={profile.id} size={84} onPress={pickPhoto} />
             <Pressable onPress={pickPhoto} style={s.camBadge}>
-              <Text style={{ fontSize: 14 }}>📷</Text>
+              <Icon name="camera" size={15} />
             </Pressable>
           </View>
           <Text style={[ui.rowHint, { marginBottom: 6 }]}>{t("changePhoto")}</Text>
@@ -174,13 +175,13 @@ export default function ProfileScreen() {
         <Text style={[ui.sec, ui.secGap]}>{t("myStats")}</Text>
         <View style={s.statGrid}>
           {[
-            ["🔥", t("nDays", { n: calcStreak(days, today) }), t("stCur")],
-            ["🏆", t("nDays", { n: longestStreak(days) }), t("stBest")],
-            ["✅", t("nTimes", { n: logs.length }), t("stTotal")],
-            ["⏱️", t("nMin", { n: totalMin }), t("stMin")],
+            ["flame", t("nDays", { n: calcStreak(days, today) }), t("stCur")],
+            ["trophy", t("nDays", { n: longestStreak(days) }), t("stBest")],
+            ["done", t("nTimes", { n: logs.length }), t("stTotal")],
+            ["timer", t("nMin", { n: totalMin }), t("stMin")],
           ].map(([icon, v, l]) => (
             <View key={l} style={s.statBox}>
-              <Text style={{ fontSize: 18 }}>{icon}</Text>
+              <Icon name={icon as IconName} size={20} color={COLORS.rose} />
               <Text style={ui.statNum}>{v}</Text>
               <Text style={ui.statLabel}>{l}</Text>
             </View>
@@ -263,7 +264,7 @@ export default function ProfileScreen() {
                   )}
                 </View>
                 <Text style={ui.meta}>
-                  🔋{e.battery}% · {t("min", { n: e.min })}
+                  {t("attachBattery", { n: e.battery })} · {t("min", { n: e.min })}
                 </Text>
               </View>
             ))
@@ -323,11 +324,11 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={[ui.sumRow, { marginTop: 8 }]}>
-            <Text style={ui.name}>📸 {t("selfieGallery")}</Text>
+            <Text style={ui.name}>{t("selfieGallery")}</Text>
             <Text style={ui.sumK}>{t("comingSoon")}</Text>
           </View>
           <View style={[ui.sumRow, { borderBottomWidth: 0, alignItems: "center" }]}>
-            <Text style={ui.name}>🌐 {t("language")}</Text>
+            <Text style={ui.name}>{t("language")}</Text>
             <LangToggle />
           </View>
           <Pressable onPress={signOut} style={[s.myPosts, { alignSelf: "stretch", marginTop: 12 }]}>

@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Avatar from "../components/Avatar";
 import { openPerson, useTimeAgo } from "../components/community";
+import Icon from "../components/Icon";
 import { EmptyText, ErrorBox, LoadingView } from "../components/ui";
 import { useData } from "../lib/DataContext";
 import { useT } from "../lib/i18n";
@@ -57,7 +58,7 @@ export default function Notifications() {
             </Pressable>
           )}
         </View>
-        <Text style={[ui.hi, { marginBottom: 14 }]}>{t("notifTitle")} 🔔</Text>
+        <Text style={[ui.hi, { marginBottom: 14 }]}>{t("notifTitle")}</Text>
         {com.error && <ErrorBox message={com.error} onRetry={com.reload} />}
         <View style={[ui.card, { paddingVertical: 6, paddingHorizontal: 0 }]}>
           {notifs.length === 0 ? (
@@ -76,7 +77,7 @@ export default function Notifications() {
                     <Avatar name={who.username} uri={who.avatar_url} seed={who.id} size={42} />
                   ) : (
                     <View style={s.icon}>
-                      <Text style={{ fontSize: 20 }}>{n.type === "nudge" ? "🔥" : "🌸"}</Text>
+                      <Icon name={n.type === "nudge" ? "flame" : "bell"} size={20} color={n.type === "nudge" ? COLORS.rose : COLORS.sageDark} />
                     </View>
                   )}
                   <View style={{ flex: 1, marginLeft: 12 }}>

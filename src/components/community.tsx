@@ -12,6 +12,7 @@ import { COLORS, FONTS } from "../lib/theme";
 import type { Community } from "../lib/useCommunity";
 import type { Clip, Post } from "../lib/types";
 import Avatar from "./Avatar";
+import Icon from "./Icon";
 
 /** เวลาที่ผ่านไป เช่น "25 นาทีที่แล้ว" */
 export function useTimeAgo() {
@@ -99,7 +100,7 @@ export function Composer({ com }: { com: Community }) {
         <View>
           <Image source={{ uri: img.uri }} style={s.postImg} resizeMode="cover" />
           <Pressable onPress={() => setImg(null)} style={s.imgX}>
-            <Text style={{ color: COLORS.white, fontSize: 13 }}>✕</Text>
+            <Icon name="close" size={14} color={COLORS.white} />
           </Pressable>
         </View>
       )}
@@ -161,7 +162,7 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
         </Pressable>
         {mine ? (
           <Pressable onPress={() => com.remove(post)} style={s.actBtn}>
-            <Text style={s.actText}>🗑 {t("deletePost")}</Text>
+            <Text style={s.actText}>{t("deletePost")}</Text>
           </Pressable>
         ) : (
           <FollowBtn on={following} onPress={() => com.toggleFollow(post.userId)} small />
@@ -180,28 +181,30 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
               {clip.channel} · {t("min", { n: clip.min })}
             </Text>
           </View>
-          <Text style={s.postClipPlay}>▶</Text>
+          <Icon name="play" size={20} style={{ marginHorizontal: 8 }} />
         </Pressable>
       )}
       {post.battery != null && (
         <View style={{ flexDirection: "row", marginTop: 10 }}>
           <View style={s.tagChip}>
             <Text style={s.tagChipText}>
-              🔋 {post.battery}% · {t("tier_" + tierOf(post.battery))}
+              {t("attachBattery", { n: post.battery })} · {t("tier_" + tierOf(post.battery))}
             </Text>
           </View>
         </View>
       )}
       <View style={s.postActions}>
         <Pressable onPress={() => com.toggleCheer(post)} style={[s.actBtn, cheered && s.actOn]}>
+          <Icon name={cheered ? "heart" : "heartOutline"} size={16} color={cheered ? COLORS.rose : COLORS.sub} />
           <Text style={[s.actText, cheered && { color: COLORS.rose }]}>
-            {cheered ? "💗" : "🤍"} {t("cheer")}
+            {t("cheer")}
             {post.likes.length ? " " + post.likes.length : ""}
           </Text>
         </Pressable>
         <Pressable onPress={() => setOpen(!open)} style={[s.actBtn, open && s.actOn]}>
+          <Icon name="comment" size={15} color={COLORS.sub} />
           <Text style={s.actText}>
-            💬 {t("comments")}
+            {t("comments")}
             {post.comments.length ? " " + post.comments.length : ""}
           </Text>
         </Pressable>
@@ -299,11 +302,19 @@ const s = StyleSheet.create({
   postClip: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.greenSoft, borderRadius: 16, padding: 8, marginTop: 10 },
   postClipImg: { width: 88, height: 50, borderRadius: 10, backgroundColor: COLORS.pink },
   postClipTitle: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.text },
-  postClipPlay: { fontSize: 16, color: COLORS.sageDark, paddingHorizontal: 8 },
   tagChip: { backgroundColor: COLORS.pink, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
   tagChipText: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.sageDark },
   postActions: { flexDirection: "row", marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.pink, paddingTop: 10 },
-  actBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, marginRight: 8, backgroundColor: COLORS.bg },
+  actBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    marginRight: 8,
+    backgroundColor: COLORS.bg,
+  },
   actOn: { backgroundColor: COLORS.roseBg },
   actText: { fontFamily: FONTS.bodyBold, fontSize: 12, color: COLORS.sageDark },
   cmtRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },

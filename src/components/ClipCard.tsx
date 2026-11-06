@@ -7,6 +7,7 @@ import { fmtViews } from "../lib/logic";
 import { ui } from "../lib/styles";
 import { COLORS, FONTS } from "../lib/theme";
 import type { Clip } from "../lib/types";
+import Icon from "./Icon";
 
 /** รูปปก: ใช้ HD ก่อน ถ้าไม่มี (YouTube ส่งรูปเทาเล็ก ๆ มา) ใช้ขนาดรอง */
 function Cover({ clip, height }: { clip: Clip; height: number }) {
@@ -18,7 +19,7 @@ function Cover({ clip, height }: { clip: Clip; height: number }) {
   if (!clip.vid || i >= urls.length) {
     return (
       <View style={[s.cover, { height }]}>
-        <Text style={{ fontSize: 44 }}>{clip.emoji}</Text>
+        <Icon name="play" size={40} color={COLORS.sage} />
       </View>
     );
   }
@@ -55,7 +56,7 @@ export function ClipCard({ clip, best, small, doneToday, onDone, plays = 0 }: Ca
       <Pressable onPress={open}>
         <Cover clip={clip} height={best ? 190 : small ? 130 : 150} />
         <View style={s.playBadge} pointerEvents="none">
-          <Text style={s.playBadgeText}>▶</Text>
+          <Icon name="play" size={22} style={{ marginLeft: 2 }} />
         </View>
         <View style={s.energyPill} pointerEvents="none">
           <Text style={s.energyPillText}>
@@ -174,7 +175,6 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  playBadgeText: { color: COLORS.sageDark, fontSize: 20, marginLeft: 3 },
   energyPill: {
     position: "absolute",
     top: 10,

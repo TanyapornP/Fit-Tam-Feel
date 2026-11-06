@@ -78,11 +78,11 @@ export function ErrorBox({ message, onRetry }: { message?: string | null; onRetr
   const { t } = useT();
   return (
     <View style={s.errBox}>
-      <Text style={s.errTitle}>⚠️ {t("loadFail")}</Text>
+      <Text style={s.errTitle}>{t("loadFail")}</Text>
       {!!message && <Text style={ui.p2}>{message}</Text>}
       {onRetry && (
         <Pressable onPress={onRetry} style={[ui.pill, { alignSelf: "flex-start", marginTop: 10 }]}>
-          <Text style={ui.link}>↻ {t("retry")}</Text>
+          <Text style={ui.link}>{t("retry")}</Text>
         </Pressable>
       )}
     </View>

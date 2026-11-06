@@ -8,6 +8,7 @@ import AddClipForm from "../../components/AddClipForm";
 import BatterySlider from "../../components/BatterySlider";
 import Bell from "../../components/Bell";
 import { ClipCard, ClipRow } from "../../components/ClipCard";
+import Icon from "../../components/Icon";
 import { EmptyText, ErrorBox, LoadingView } from "../../components/ui";
 import { useAuth } from "../../lib/AuthContext";
 import { useData } from "../../lib/DataContext";
@@ -97,7 +98,7 @@ export default function Home() {
         {/* ความต่อเนื่อง + ปฏิทินสัปดาห์ */}
         <View style={s.streakCard}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ fontSize: 34 }}>🔥</Text>
+            <Icon name="flame" size={32} color={COLORS.rose} />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={s.streakNum}>{t("streak", { n: streak })}</Text>
               <Text style={ui.p2}>{todayLogs.length ? t("doneToday") : t("moveToday")}</Text>
@@ -107,7 +108,7 @@ export default function Home() {
             {DAYS[lang].map((label, i) => (
               <View key={i} style={{ alignItems: "center" }}>
                 <View style={[s.dot, week[i] && s.dotOn, i === todayIdx && s.dotToday]}>
-                  {week[i] && <Text style={{ color: COLORS.white, fontSize: 12 }}>✓</Text>}
+                  {week[i] && <Icon name="check" size={14} color={COLORS.white} />}
                 </View>
                 <Text style={s.dotLabel}>{label}</Text>
               </View>
@@ -142,7 +143,7 @@ export default function Home() {
           <View style={s.doneCard}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={s.doneTitle}>✅ {t("doneSum", { n: todayLogs.length, m: todayMin })}</Text>
+                <Text style={s.doneTitle}>{t("doneSum", { n: todayLogs.length, m: todayMin })}</Text>
                 <Text style={[ui.meta, { color: COLORS.sageDark }]}>{t("doneMore")}</Text>
               </View>
               <Pressable onPress={share} style={s.shareBtn}>
@@ -156,10 +157,10 @@ export default function Home() {
                   {e.title}
                 </Text>
                 <Text style={ui.meta}>
-                  🔋{e.battery}% · {t("min", { n: e.min })}
+                  {t("attachBattery", { n: e.battery })} · {t("min", { n: e.min })}
                 </Text>
                 <Pressable onPress={() => run(() => d.undoLog(e.id))} style={{ marginLeft: 8 }}>
-                  <Text style={ui.link}>↩︎ {t("undo")}</Text>
+                  <Text style={ui.link}>{t("undo")}</Text>
                 </Pressable>
               </View>
             ))}
