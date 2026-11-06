@@ -1,7 +1,7 @@
 import { IBMPlexSansThai_400Regular, IBMPlexSansThai_600SemiBold } from "@expo-google-fonts/ibm-plex-sans-thai";
 import { Prompt_600SemiBold, Prompt_700Bold } from "@expo-google-fonts/prompt";
 import { useFonts } from "expo-font";
-import { Stack, router, useSegments } from "expo-router";
+import { DefaultTheme, Stack, ThemeProvider, router, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
 
@@ -11,6 +11,9 @@ import { LoadingView } from "../components/ui";
 import { AuthProvider, useAuth } from "../lib/AuthContext";
 import { DataProvider } from "../lib/DataContext";
 import { LangProvider } from "../lib/i18n";
+
+// บนเว็บ แต่ละหน้าใช้สีพื้นจากธีม (เทาอ่อน) ทับพื้นหลังเคลื่อนไหว → ตั้งให้โปร่งใส
+const CLEAR_THEME = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: "transparent" } };
 
 /** พาไปหน้าที่ถูกต้อง: ยังไม่ล็อกอิน → login · ยังไม่ตั้งค่า → onboarding · พร้อมแล้ว → แท็บ */
 function AuthGate() {
@@ -35,14 +38,16 @@ function AuthGate() {
       {loading ? (
         <LoadingView />
       ) : (
-        <Stack screenLayout={focusOnlyLayout} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="person/[id]" />
-          <Stack.Screen name="people/[id]" />
-        </Stack>
+        <ThemeProvider value={CLEAR_THEME}>
+          <Stack screenLayout={focusOnlyLayout} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="person/[id]" />
+            <Stack.Screen name="people/[id]" />
+          </Stack>
+        </ThemeProvider>
       )}
     </View>
   );
