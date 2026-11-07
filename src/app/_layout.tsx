@@ -46,6 +46,7 @@ function AuthGate() {
             <Stack.Screen name="login" />
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="notifications" />
+            <Stack.Screen name="selfies" />
             <Stack.Screen name="person/[id]" />
             <Stack.Screen name="people/[id]" />
           </Stack>

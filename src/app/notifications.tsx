@@ -15,7 +15,7 @@ import { COLORS, FONTS } from "../lib/theme";
 import type { Notif } from "../lib/types";
 import { useCommunity } from "../lib/useCommunity";
 
-const TEXT_KEY = { follow: "nFollow", cheer: "nCheer", comment: "nComment", nudge: "nNudge", welcome: "nWelcome" } as const;
+const TEXT_KEY = { follow: "nFollow", cheer: "nCheer", comment: "nComment", reply: "nReply", nudge: "nNudge", welcome: "nWelcome" } as const;
 
 export default function Notifications() {
   const { t } = useT();
@@ -32,12 +32,14 @@ export default function Notifications() {
     if (n.type === "follow" && n.actorId) openPerson(n.actorId);
     else if (n.type === "cheer" || n.type === "comment")
       router.navigate({ pathname: "/community", params: { feed: "mine", open: n.postId ?? "" } });
+    // ตอบกลับอาจอยู่ในโพสต์ของคนอื่น → เปิดฟีดทั้งหมดแล้วกางโพสต์นั้น
+    else if (n.type === "reply") router.navigate({ pathname: "/community", params: { feed: "all", open: n.postId ?? "" } });
     else if (n.type === "welcome") router.navigate("/community");
     else router.navigate("/");
   };
 
   const snippet = (n: Notif) => {
-    if (n.type === "comment") return "“" + (n.text ?? "") + "”";
+    if (n.type === "comment" || n.type === "reply") return "“" + (n.text ?? "") + "”";
     if (n.type === "cheer") {
       const p = com.posts.find((x) => x.id === n.postId);
       return p?.content ? "“" + p.content.slice(0, 50) + (p.content.length > 50 ? "…" : "") + "”" : "";

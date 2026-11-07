@@ -30,6 +30,7 @@ export type LogEntry = {
   battery: number;
   day: string; // yyyy-mm-dd
   at: number; // เวลาที่บันทึก (ms)
+  selfie: string | null; // พาธรูปเซลฟี่ในบัคเก็ต selfies (ส่วนตัว)
 };
 
 /** ข้อมูลส่วนตัว (ตาราง profile — อ่านได้แค่เจ้าของ) */
@@ -60,7 +61,8 @@ export type PublicCard = {
   current_streak: number;
 };
 
-export type Comment = { id: string; userId: string; content: string; at: number };
+/** คอมเมนต์ 1 อัน · parentId ว่าง = คอมเมนต์หลัก, มีค่า = ตอบกลับคอมเมนต์หลักนั้น (ลึกได้ 1 ระดับ) */
+export type Comment = { id: string; userId: string; parentId: string | null; content: string; at: number };
 
 export type Post = {
   id: string;
@@ -76,7 +78,7 @@ export type Post = {
 
 export type Follow = { follower: string; following: string };
 
-export type NotifType = "follow" | "cheer" | "comment" | "nudge" | "welcome";
+export type NotifType = "follow" | "cheer" | "comment" | "reply" | "nudge" | "welcome";
 export type Notif = {
   id: string;
   type: NotifType;

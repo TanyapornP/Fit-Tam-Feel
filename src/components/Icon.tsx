@@ -15,6 +15,7 @@ const ICONS = {
   timer: ["timer", "timer"],
   check: ["checkmark", "check"],
   camera: ["camera.fill", "photo_camera"],
+  photo: ["photo.fill", "photo_library"],
   close: ["xmark", "close"],
   heart: ["heart.fill", "favorite"],
   heartOutline: ["heart", "favorite_border"],

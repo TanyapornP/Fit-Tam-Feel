@@ -69,7 +69,8 @@ export function useCommunity() {
     followersOf,
     toggleFollow: (target: string) => run(() => api.setFollow(me, target, !followingOf(me).has(target))),
     toggleCheer: (p: Post) => run(() => api.setCheer(p.id, me, !p.likes.includes(me))),
-    comment: (p: Post, text: string) => run(() => api.addComment(p.id, text)),
+    comment: (p: Post, text: string, parentId?: string) => run(() => api.addComment(p.id, text, parentId)),
+    removeComment: (id: string) => run(() => api.deleteComment(id)),
     remove: (p: Post) => run(() => api.deletePost(p.id)),
     createPost: (input: Parameters<typeof api.createPost>[1]) => run(() => api.createPost(me, input)),
   };

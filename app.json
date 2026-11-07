@@ -36,7 +36,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Fit-Tam-Feel ใช้รูปจากเครื่องเพื่อเปลี่ยนรูปโปรไฟล์และแนบรูปในโพสต์"
+          "photosPermission": "Fit-Tam-Feel ใช้รูปจากเครื่องเพื่อเปลี่ยนรูปโปรไฟล์ แนบรูปในโพสต์ และเก็บเซลฟี่หลังออกกำลังกาย",
+          "cameraPermission": "Fit-Tam-Feel ใช้กล้องเพื่อถ่ายรูปโปรไฟล์ รูปในโพสต์ และเซลฟี่หลังออกกำลังกาย",
+          "microphonePermission": false
         }
       ]
     ],

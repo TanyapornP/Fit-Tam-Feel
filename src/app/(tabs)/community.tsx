@@ -31,6 +31,7 @@ export default function CommunityScreen() {
   if (paramKey !== seenParam) {
     setSeenParam(paramKey);
     if (params.feed === "mine") setFeed("mine");
+    else if (params.feed === "all") setFeed("all");
   }
 
   if (com.loading) return <LoadingView />;

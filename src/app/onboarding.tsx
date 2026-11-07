@@ -1,5 +1,4 @@
 // ตั้งค่าครั้งแรก 4 ขั้น (ถามเฉพาะที่แอปใช้จริง) → บันทึกลงตาราง profile
-import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,12 +6,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Avatar from "../components/Avatar";
 import BatterySlider from "../components/BatterySlider";
 import Icon from "../components/Icon";
+import PhotoSheet from "../components/PhotoSheet";
 import { Btn, Chips, Field } from "../components/ui";
 import { DEFAULT_ANSWERS, MODE_CHIPS, birthYearCE, chipMode, fromProfile, modeChip, toProfilePatch, type Answers } from "../lib/answers";
 import { uploadImage } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useT } from "../lib/i18n";
 import { tierOf } from "../lib/logic";
+import { photoErrorText, pickPhoto, type PhotoSource } from "../lib/photo";
 import { ui } from "../lib/styles";
 import { COLORS, FONTS } from "../lib/theme";
 
@@ -34,23 +35,22 @@ export default function Onboarding() {
       setA((o) => ({ ...o, [k]: v }));
 
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const yobFilled = a.yob.length === 4;
   const yobOk = birthYearCE(a.yob) != null;
   const canNext = step !== 0 || (a.nick.trim().length > 0 && yobOk);
 
   // เลือกรูปโปรไฟล์ (ไม่บังคับ) → อัปโหลดขึ้น Storage แล้วบันทึกทันที
-  const pickPhoto = async () => {
+  const changePhoto = async (source: PhotoSource) => {
     setErr("");
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return setErr(t("errPhotoPerm"));
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.6 });
-      if (res.canceled || !res.assets[0] || !userId) return;
+      const picked = await pickPhoto(source, { square: true });
+      if (!picked || !userId) return;
       setPhotoBusy(true);
-      const url = await uploadImage("avatars", userId, res.assets[0].uri, res.assets[0].mimeType);
+      const url = await uploadImage("avatars", userId, picked.uri, picked.mime);
       await saveProfile({ avatar_url: url });
-    } catch {
-      setErr(t("errPhoto"));
+    } catch (e) {
+      setErr(photoErrorText(e, t));
     } finally {
       setPhotoBusy(false);
     }
@@ -97,8 +97,8 @@ export default function Onboarding() {
             <Text style={ui.p}>{t("s0p")}</Text>
             <View style={s.photoWrap}>
               <View>
-                <Avatar name={a.nick || profile?.username || null} uri={profile?.avatar_url} seed={userId ?? "me"} size={96} onPress={pickPhoto} />
-                <Pressable onPress={pickPhoto} style={s.camBadge} disabled={photoBusy}>
+                <Avatar name={a.nick || profile?.username || null} uri={profile?.avatar_url} seed={userId ?? "me"} size={96} onPress={() => setSheet(true)} />
+                <Pressable onPress={() => setSheet(true)} style={s.camBadge} disabled={photoBusy}>
                   <Icon name="camera" size={16} />
                 </Pressable>
               </View>
@@ -174,6 +174,7 @@ export default function Onboarding() {
       <View style={s.bottom}>
         <Btn label={step === STEPS - 1 ? t("startFirst") : t("cont")} onPress={next} disabled={!canNext} busy={busy} />
       </View>
+      <PhotoSheet visible={sheet} onClose={() => setSheet(false)} onPick={changePhoto} />
     </SafeAreaView>
   );
 }

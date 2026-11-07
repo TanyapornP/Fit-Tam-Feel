@@ -1,5 +1,4 @@
 // หน้าโปรไฟล์: รูป · สถิติ · เป้าหมายสัปดาห์ · พลังงาน · คลิปที่เล่นบ่อย · ประวัติ · ความชอบ · ตั้งค่า
-import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
@@ -7,13 +6,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Avatar from "../../components/Avatar";
 import Icon, { type IconName } from "../../components/Icon";
+import PhotoSheet from "../../components/PhotoSheet";
 import { Chips, ErrorBox, Field, LangToggle, LoadingView } from "../../components/ui";
 import { MODE_CHIPS, chipMode, fromProfile, modeChip, toProfilePatch, type Answers } from "../../lib/answers";
-import { uploadImage } from "../../lib/api";
+import { deleteMyAccount, uploadImage } from "../../lib/api";
 import { useAuth } from "../../lib/AuthContext";
 import { useData } from "../../lib/DataContext";
 import { useT } from "../../lib/i18n";
 import { calcStreak, daysBetween, longestStreak, tierOf, toDate, weekDone } from "../../lib/logic";
+import { photoErrorText, pickPhoto, type PhotoSource } from "../../lib/photo";
 import { ui } from "../../lib/styles";
 import { supabase } from "../../lib/supabase";
 import { COLORS, FONTS } from "../../lib/theme";
@@ -37,6 +38,8 @@ export default function ProfileScreen() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ posts: 0, followers: 0, following: 0 });
+  const [sheet, setSheet] = useState(false); // แผ่นเลือกกล้อง/คลังภาพ
+  const [confirmDel, setConfirmDel] = useState(false);
 
   // จำนวนโพสต์ / ผู้ติดตาม / กำลังติดตาม (นับในฐานข้อมูล ไม่ต้องดึงข้อมูลทั้งหมด)
   useFocusEffect(
@@ -72,18 +75,29 @@ export default function ProfileScreen() {
     }
   };
 
-  const pickPhoto = async () => {
+  const changePhoto = async (source: PhotoSource) => {
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return setMsg(t("errPhotoPerm"));
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.6 });
-      if (res.canceled || !res.assets[0] || !userId) return;
+      const picked = await pickPhoto(source, { square: true });
+      if (!picked || !userId) return;
       setBusy(true);
-      const url = await uploadImage("avatars", userId, res.assets[0].uri, res.assets[0].mimeType);
+      const url = await uploadImage("avatars", userId, picked.uri, picked.mime);
       await saveProfile({ avatar_url: url });
       setMsg("");
+    } catch (e) {
+      setMsg(photoErrorText(e, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAccount = async () => {
+    setBusy(true);
+    try {
+      await deleteMyAccount();
+      await signOut(); // บัญชีถูกลบแล้ว → ล้าง session ในเครื่อง กลับไปหน้าเข้าสู่ระบบ
     } catch {
-      setMsg(t("errPhoto"));
+      setMsg(t("delAccFail"));
+      setConfirmDel(false);
     } finally {
       setBusy(false);
     }
@@ -126,8 +140,8 @@ export default function ProfileScreen() {
             <Text style={ui.link}>{editing ? t("doneEdit") : t("edit")}</Text>
           </Pressable>
           <View style={{ marginBottom: 10 }}>
-            <Avatar name={profile.username} uri={profile.avatar_url} seed={profile.id} size={84} onPress={pickPhoto} />
-            <Pressable onPress={pickPhoto} style={s.camBadge}>
+            <Avatar name={profile.username} uri={profile.avatar_url} seed={profile.id} size={84} onPress={() => setSheet(true)} />
+            <Pressable onPress={() => setSheet(true)} style={s.camBadge} accessibilityLabel={t("changePhoto")}>
               <Icon name="camera" size={15} />
             </Pressable>
           </View>
@@ -317,10 +331,10 @@ export default function ProfileScreen() {
               trackColor={{ true: COLORS.sage, false: COLORS.line }}
             />
           </View>
-          <View style={[ui.sumRow, { marginTop: 8 }]}>
+          <Pressable onPress={() => router.push("/selfies")} style={[ui.sumRow, { marginTop: 8, alignItems: "center" }]}>
             <Text style={ui.name}>{t("selfieGallery")}</Text>
-            <Text style={ui.sumK}>{t("comingSoon")}</Text>
-          </View>
+            <Text style={ui.sumK}>{t("selfieCount", { n: logs.filter((e) => !!e.selfie).length })} ›</Text>
+          </Pressable>
           <View style={[ui.sumRow, { borderBottomWidth: 0, alignItems: "center" }]}>
             <Text style={ui.name}>{t("language")}</Text>
             <LangToggle />
@@ -337,9 +351,29 @@ export default function ProfileScreen() {
           <Pressable onPress={signOut} style={[s.myPosts, { alignSelf: "stretch", marginTop: 12 }]}>
             <Text style={[s.myPostsText, { textAlign: "center" }]}>{t("logout")}</Text>
           </Pressable>
+          {/* ลบบัญชี — ต้องกดยืนยันอีกชั้น เพราะกู้คืนไม่ได้ */}
+          {confirmDel ? (
+            <View style={s.delBox}>
+              <Text style={s.delAsk}>{t("delAccAsk")}</Text>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                <Pressable onPress={() => setConfirmDel(false)} disabled={busy} style={[s.delBtn, s.delCancel]}>
+                  <Text style={[s.delBtnText, { color: COLORS.sub }]}>{t("cancel")}</Text>
+                </Pressable>
+                <Pressable onPress={removeAccount} disabled={busy} style={[s.delBtn, busy && { opacity: 0.5 }]}>
+                  <Text style={s.delBtnText}>{t("delAccYes")}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => setConfirmDel(true)} style={{ marginTop: 16 }}>
+              <Text style={s.delLink}>{t("delAcc")}</Text>
+              <Text style={[ui.p2, { textAlign: "center", marginTop: 2 }]}>{t("delAccS")}</Text>
+            </Pressable>
+          )}
         </View>
         <Text style={ui.foot}>{t("madeWith")}</Text>
       </ScrollView>
+      <PhotoSheet visible={sheet} onClose={() => setSheet(false)} onPick={changePhoto} />
     </SafeAreaView>
   );
 }
@@ -366,6 +400,12 @@ const s = StyleSheet.create({
   followRow: { flexDirection: "row", justifyContent: "center", marginTop: 14 },
   myPosts: { backgroundColor: COLORS.sage, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 18, marginTop: 14 },
   myPostsText: { fontFamily: FONTS.bodyBold, color: COLORS.white, fontSize: 13 },
+  delLink: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.rose, textAlign: "center" },
+  delBox: { marginTop: 16, backgroundColor: COLORS.roseBg, borderRadius: 16, padding: 14 },
+  delAsk: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.rose, textAlign: "center" },
+  delBtn: { flex: 1, backgroundColor: COLORS.rose, borderRadius: 999, paddingVertical: 10, alignItems: "center" },
+  delCancel: { backgroundColor: COLORS.white },
+  delBtnText: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.white },
   statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   statBox: {
     width: "48%",

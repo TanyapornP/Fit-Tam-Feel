@@ -9,11 +9,13 @@ import BatterySlider from "../../components/BatterySlider";
 import Bell from "../../components/Bell";
 import { ClipCard, ClipRow } from "../../components/ClipCard";
 import Icon from "../../components/Icon";
+import PhotoSheet from "../../components/PhotoSheet";
 import { EmptyText, ErrorBox, LoadingView } from "../../components/ui";
 import { useAuth } from "../../lib/AuthContext";
 import { useData } from "../../lib/DataContext";
 import { DAYS, useT } from "../../lib/i18n";
 import { LEVELS, calcStreak, levelIdx, orderClips, tierOf, weekDone } from "../../lib/logic";
+import { PhotoPermissionError, photoErrorText, pickPhoto, type PhotoSource } from "../../lib/photo";
 import { ui } from "../../lib/styles";
 import { COLORS, FONTS } from "../../lib/theme";
 import type { Clip } from "../../lib/types";
@@ -26,6 +28,7 @@ export default function Home() {
   const [lastSettled, setLastSettled] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selfieFor, setSelfieFor] = useState<string | null>(null); // id ของการออกกำลังกายที่กำลังจะถ่ายเซลฟี่
 
   if (d.loading && !d.clips.length) return <LoadingView />;
 
@@ -74,6 +77,28 @@ export default function Home() {
     } catch (e) {
       const msg = (e as Error).message;
       setActionErr(/duplicate|unique/i.test(msg) ? t("dupDone") : t("saveFail"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // กด "ทำแล้ว" → บันทึก แล้วถ้าเปิดเซลฟี่ไว้ในตั้งค่า ชวนถ่ายรูปเก็บไว้ (ข้ามได้)
+  const doneClip = (c: Clip) =>
+    run(async () => {
+      const entry = await d.logClip(c);
+      if (profile?.selfie_enabled) setSelfieFor(entry.id);
+    });
+
+  const takeSelfie = async (source: PhotoSource) => {
+    const id = selfieFor;
+    if (!id || busy) return;
+    setBusy(true);
+    try {
+      setActionErr("");
+      const picked = await pickPhoto(source, { selfie: true });
+      if (picked) await d.addSelfie(id, picked.uri, picked.mime);
+    } catch (e) {
+      setActionErr(e instanceof PhotoPermissionError ? photoErrorText(e, t) : t("errPhoto"));
     } finally {
       setBusy(false);
     }
@@ -166,6 +191,11 @@ export default function Home() {
                 <Text style={ui.meta}>
                   {t("attachBattery", { n: e.battery })} · {t("min", { n: e.min })}
                 </Text>
+                {!!profile?.selfie_enabled && !e.selfie && (
+                  <Pressable onPress={() => setSelfieFor(e.id)} style={{ marginLeft: 8 }} accessibilityLabel={t("selfieAdd")}>
+                    <Icon name="camera" size={16} />
+                  </Pressable>
+                )}
                 <Pressable onPress={() => run(() => d.undoLog(e.id))} style={{ marginLeft: 8 }}>
                   <Text style={ui.link}>{t("undo")}</Text>
                 </Pressable>
@@ -189,14 +219,14 @@ export default function Home() {
             best
             plays={plays(best)}
             doneToday={todayIds.includes(best.id)}
-            onDone={() => run(() => d.logClip(best))}
+            onDone={() => doneClip(best)}
           />
         ) : (
           <EmptyText text={t("noClipsLevel")} />
         )}
-        <ClipRow title={t("sameLevel")} items={sameLevel.slice(1)} todayIds={todayIds} plays={plays} onDone={(c) => run(() => d.logClip(c))} />
-        <ClipRow title={t("easier")} items={easier} todayIds={todayIds} plays={plays} onDone={(c) => run(() => d.logClip(c))} />
-        <ClipRow title={t("harder")} items={harder} todayIds={todayIds} plays={plays} onDone={(c) => run(() => d.logClip(c))} />
+        <ClipRow title={t("sameLevel")} items={sameLevel.slice(1)} todayIds={todayIds} plays={plays} onDone={doneClip} />
+        <ClipRow title={t("easier")} items={easier} todayIds={todayIds} plays={plays} onDone={doneClip} />
+        <ClipRow title={t("harder")} items={harder} todayIds={todayIds} plays={plays} onDone={doneClip} />
 
         {/* คลิปของฉัน */}
         <View style={[ui.rowHead, { marginTop: 22, marginBottom: 4 }]}>
@@ -214,11 +244,18 @@ export default function Home() {
           todayIds={todayIds}
           plays={plays}
           matchKey={tier}
-          onDone={(c) => run(() => d.logClip(c))}
+          onDone={doneClip}
           onRemove={(c) => run(() => d.removeClip(c.id))}
         />
         <Text style={ui.foot}>{t("foot")}</Text>
       </ScrollView>
+      <PhotoSheet
+        visible={!!selfieFor}
+        onClose={() => setSelfieFor(null)}
+        onPick={takeSelfie}
+        title={t("selfieAsk")}
+        subtitle={t("selfieAskS")}
+      />
     </SafeAreaView>
   );
 }

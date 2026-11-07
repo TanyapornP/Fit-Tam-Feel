@@ -103,6 +103,7 @@ type LogRow = {
   duration_minutes: number | null;
   completed_date: string;
   completed_at: string;
+  selfie_url: string | null;
   workout_clip: { title: string; energy_table: { name: LevelKey } | null } | null;
 };
 
@@ -115,9 +116,10 @@ const toLog = (r: LogRow): LogEntry => ({
   battery: r.battery_level,
   day: r.completed_date,
   at: ms(r.completed_at),
+  selfie: r.selfie_url,
 });
 
-const LOG_COLS = "id, clip_id, battery_level, duration_minutes, completed_date, completed_at, workout_clip(title, energy_table(name))";
+const LOG_COLS = "id, clip_id, battery_level, duration_minutes, completed_date, completed_at, selfie_url, workout_clip(title, energy_table(name))";
 
 export async function fetchLogs(): Promise<LogEntry[]> {
   const rows = must(
@@ -157,14 +159,50 @@ export async function updateProfile(uid: string, patch: Partial<Profile>): Promi
   ) as Profile;
 }
 
+/** ชนิดไฟล์ + นามสกุลที่ใช้ได้ (ที่เก็บรูปรับเฉพาะ JPEG / PNG / WebP) */
+function imageType(mime?: string | null) {
+  const type = mime && mime.startsWith("image/") ? mime : "image/jpeg";
+  const sub = type.split("/")[1];
+  return { type, ext: sub === "png" ? "png" : sub === "webp" ? "webp" : "jpg" };
+}
+
 /** อัปโหลดรูปจากเครื่องไปที่ Storage (โฟลเดอร์ของตัวเอง) แล้วคืนลิงก์รูป */
 export async function uploadImage(bucket: "avatars" | "post-images", uid: string, uri: string, mime?: string | null) {
-  const type = mime && mime.startsWith("image/") ? mime : "image/jpeg";
-  const ext = type.split("/")[1] === "png" ? "png" : type.split("/")[1] === "webp" ? "webp" : "jpg";
+  const { type, ext } = imageType(mime);
   const body = await fetch(uri).then((r) => r.arrayBuffer());
   const path = `${uid}/${Date.now()}.${ext}`;
   must(await supabase.storage.from(bucket).upload(path, body, { contentType: type }));
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- เซลฟี่หลังออกกำลังกาย (บัคเก็ต selfies เป็นส่วนตัว · เก็บพาธไว้ที่ user_did_it.selfie_url) ---------- */
+export async function uploadSelfie(uid: string, logId: string, uri: string, mime?: string | null): Promise<string> {
+  const { type, ext } = imageType(mime);
+  const body = await fetch(uri).then((r) => r.arrayBuffer());
+  const path = `${uid}/${logId}-${Date.now()}.${ext}`;
+  must(await supabase.storage.from("selfies").upload(path, body, { contentType: type }));
+  const res = await supabase.from("user_did_it").update({ selfie_url: path }).eq("id", logId);
+  if (res.error) {
+    await supabase.storage.from("selfies").remove([path]); // บันทึกพาธไม่ได้ → ไม่ทิ้งไฟล์ค้าง
+    throw new Error(res.error.message);
+  }
+  return path;
+}
+
+export async function removeSelfie(logId: string | null, path: string) {
+  must(await supabase.storage.from("selfies").remove([path]));
+  if (logId) must(await supabase.from("user_did_it").update({ selfie_url: null }).eq("id", logId));
+}
+
+/** ลิงก์ชั่วคราว (1 ชั่วโมง) สำหรับดูรูปในบัคเก็ตส่วนตัว — คืน map พาธ → ลิงก์ */
+export async function signedSelfieUrls(paths: string[]): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const rows = must(await supabase.storage.from("selfies").createSignedUrls(paths, 3600)) as { path: string | null; signedUrl: string }[];
+  const out: Record<string, string> = {};
+  rows.forEach((r) => {
+    if (r.path) out[r.path] = r.signedUrl;
+  });
+  return out;
 }
 
 /* ---------- ชุมชน (posts / follows / post_likes / post_comments / public_profile) ---------- */
@@ -177,7 +215,7 @@ type PostRow = {
   battery_level: number | null;
   created_at: string;
   post_likes: { user_id: string }[];
-  post_comments: { id: string; user_id: string; content: string; created_at: string }[];
+  post_comments: { id: string; user_id: string; parent_id: string | null; content: string; created_at: string }[];
 };
 
 export type CommunityData = { posts: Post[]; cards: Record<string, PublicCard>; follows: Follow[] };
@@ -186,7 +224,7 @@ export async function fetchCommunity(): Promise<CommunityData> {
   const [postRes, cardRes, followRes] = await Promise.all([
     supabase
       .from("posts")
-      .select("id, user_id, content, image_url, clip_id, battery_level, created_at, post_likes(user_id), post_comments(id, user_id, content, created_at)")
+      .select("id, user_id, content, image_url, clip_id, battery_level, created_at, post_likes(user_id), post_comments(id, user_id, parent_id, content, created_at)")
       .order("created_at", { ascending: false })
       .limit(60),
     supabase.from("public_profile").select("id, username, avatar_url, bio, current_streak").limit(300),
@@ -213,7 +251,7 @@ export async function fetchCommunity(): Promise<CommunityData> {
       at: ms(p.created_at),
       likes: p.post_likes.map((l) => l.user_id),
       comments: p.post_comments
-        .map((c) => ({ id: c.id, userId: c.user_id, content: c.content, at: ms(c.created_at) }))
+        .map((c) => ({ id: c.id, userId: c.user_id, parentId: c.parent_id, content: c.content, at: ms(c.created_at) }))
         .sort((a, b) => a.at - b.at),
     })),
   };
@@ -243,8 +281,18 @@ export async function setCheer(postId: string, uid: string, on: boolean) {
   else must(await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", uid));
 }
 
-export async function addComment(postId: string, content: string) {
-  must(await supabase.from("post_comments").insert({ post_id: postId, content }));
+/** parentId = คอมเมนต์ที่ตอบกลับ (ไม่ใส่ = คอมเมนต์หลัก) */
+export async function addComment(postId: string, content: string, parentId?: string) {
+  must(await supabase.from("post_comments").insert({ post_id: postId, content, parent_id: parentId ?? null }));
+}
+
+export async function deleteComment(id: string) {
+  must(await supabase.from("post_comments").delete().eq("id", id));
+}
+
+/** ลบบัญชีตัวเอง — ฟังก์ชันในฐานข้อมูลลบผู้ใช้ แล้วข้อมูลทุกตารางถูกลบตามอัตโนมัติ */
+export async function deleteMyAccount() {
+  must(await supabase.rpc("delete_my_account"));
 }
 
 export async function setFollow(uid: string, target: string, on: boolean) {

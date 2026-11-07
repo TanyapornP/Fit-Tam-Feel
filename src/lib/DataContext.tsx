@@ -37,8 +37,11 @@ type DataValue = {
   rot: Record<string, number>;
   bumpRot: (key: string) => void;
   // บันทึก
-  logClip: (clip: Clip) => Promise<void>;
+  logClip: (clip: Clip) => Promise<LogEntry>;
   undoLog: (id: string) => Promise<void>;
+  // เซลฟี่หลังออกกำลังกาย (ส่วนตัว)
+  addSelfie: (logId: string, uri: string, mime: string | null) => Promise<void>;
+  deleteSelfie: (logId: string) => Promise<void>;
   addClip: (input: { title: string; min: number; vid: string; pct: number; level: LevelKey }) => Promise<void>;
   removeClip: (id: string) => Promise<void>;
   // แชร์จากหน้าหลักไปหน้าชุมชน
@@ -111,10 +114,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const logClip = async (clip: Clip) => {
     const entry = await api.addLog(clip, battery);
     setStore((s) => ({ ...s, logs: [entry, ...s.logs] }));
+    return entry;
   };
   const undoLog = async (id: string) => {
+    const old = logs.find((e) => e.id === id);
     await api.deleteLog(id);
     setStore((s) => ({ ...s, logs: s.logs.filter((e) => e.id !== id) }));
+    if (old?.selfie) api.removeSelfie(null, old.selfie).catch(() => {}); // ไม่ทิ้งไฟล์เซลฟี่ค้างในที่เก็บ
+  };
+  const addSelfie = async (logId: string, uri: string, mime: string | null) => {
+    if (!userId) return;
+    const path = await api.uploadSelfie(userId, logId, uri, mime);
+    setStore((s) => ({ ...s, logs: s.logs.map((e) => (e.id === logId ? { ...e, selfie: path } : e)) }));
+  };
+  const deleteSelfie = async (logId: string) => {
+    const old = logs.find((e) => e.id === logId);
+    if (!old?.selfie) return;
+    await api.removeSelfie(logId, old.selfie);
+    setStore((s) => ({ ...s, logs: s.logs.map((e) => (e.id === logId ? { ...e, selfie: null } : e)) }));
   };
   const addClip = async (input: { title: string; min: number; vid: string; pct: number; level: LevelKey }) => {
     if (!userId || !store.levels) return;
@@ -159,6 +176,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         bumpRot: (key) => setRot((r) => ({ ...r, [key]: (r[key] ?? 0) + 1 })),
         logClip,
         undoLog,
+        addSelfie,
+        deleteSelfie,
         addClip,
         removeClip,
         draft,

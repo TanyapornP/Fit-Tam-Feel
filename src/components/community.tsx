@@ -1,5 +1,4 @@
 // ชิ้นส่วนหน้าชุมชน: ปุ่มติดตาม, ช่องโพสต์, การ์ดโพสต์
-import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
@@ -7,10 +6,11 @@ import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } f
 import { useData } from "../lib/DataContext";
 import { useT } from "../lib/i18n";
 import { tierOf } from "../lib/logic";
+import { photoErrorText, pickPhoto, type PhotoSource } from "../lib/photo";
 import { ui } from "../lib/styles";
 import { COLORS, FONTS } from "../lib/theme";
 import type { Community } from "../lib/useCommunity";
-import type { Clip, Post } from "../lib/types";
+import type { Clip, Comment, Post } from "../lib/types";
 import Avatar from "./Avatar";
 import Icon from "./Icon";
 
@@ -52,17 +52,15 @@ export function Composer({ com }: { com: Community }) {
   const [err, setErr] = useState("");
   const latestClip: Clip | undefined = clips.find((c) => c.id === latest?.clipId);
 
-  const pick = async () => {
+  const pick = async (source: PhotoSource) => {
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return setErr(t("errPhotoPerm"));
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, quality: 0.6 });
-      if (!res.canceled && res.assets[0]) {
+      const picked = await pickPhoto(source);
+      if (picked) {
         setErr("");
-        setImg({ uri: res.assets[0].uri, mime: res.assets[0].mimeType ?? null });
+        setImg(picked);
       }
-    } catch {
-      setErr(t("errPhoto"));
+    } catch (e) {
+      setErr(photoErrorText(e, t));
     }
   };
 
@@ -107,7 +105,8 @@ export function Composer({ com }: { com: Community }) {
       <View style={s.attachRow}>
         <Chip on={withBat} onPress={() => setWithBat(!withBat)} label={t("attachBattery", { n: shareBattery })} />
         {!!latestClip && <Chip on={withClip} onPress={() => setWithClip(!withClip)} label={t("attachClip")} />}
-        <Chip on={!!img} onPress={pick} label={t("attachPhoto")} />
+        <Chip on={false} onPress={() => pick("camera")} label={t("attachCamera")} />
+        <Chip on={false} onPress={() => pick("gallery")} label={t("attachPhoto")} />
       </View>
       {!!err && <Text style={ui.err}>{err}</Text>}
       <View style={s.composeFoot}>
@@ -167,6 +166,8 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
   const ago = useTimeAgo();
   const [open, setOpen] = useState(!!initialOpen);
   const [text, setText] = useState("");
+  // กำลังตอบกลับคอมเมนต์ไหน (parentId = คอมเมนต์หลัก, name = ชื่อคนที่ตอบถึง)
+  const [replyTo, setReplyTo] = useState<{ parentId: string; name: string } | null>(null);
   const author = com.card(post.userId);
   const mine = post.userId === com.me;
   const cheered = post.likes.includes(com.me);
@@ -176,8 +177,48 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
   const send = async () => {
     const v = text.trim();
     if (!v) return;
+    const target = replyTo;
     setText("");
-    await com.comment(post, v.slice(0, 300));
+    setReplyTo(null);
+    await com.comment(post, v.slice(0, 300), target?.parentId);
+  };
+
+  // ตอบกลับคอมเมนต์ c: ถ้า c เป็นคำตอบอยู่แล้ว ให้ไปต่อท้ายคอมเมนต์หลักเดิม (ซ้อนได้ 1 ระดับ) แล้วใส่ @ชื่อ นำหน้า
+  const startReply = (c: Comment) => {
+    const name = com.card(c.userId).username ?? "—";
+    setReplyTo({ parentId: c.parentId ?? c.id, name });
+    setText(c.parentId ? `@${name} ` : "");
+  };
+
+  const topLevel = post.comments.filter((c) => !c.parentId);
+  const repliesOf = (id: string) => post.comments.filter((c) => c.parentId === id);
+
+  const renderComment = (c: Comment, isReply: boolean) => {
+    const a = com.card(c.userId);
+    return (
+      <View key={c.id} style={[s.cmtRow, isReply && s.replyRow]}>
+        <Avatar name={a.username} uri={a.avatar_url} seed={c.userId} size={isReply ? 24 : 28} onPress={() => openPerson(c.userId)} />
+        <View style={{ flex: 1 }}>
+          <View style={s.cmtBubble}>
+            <Text style={s.cmtName}>
+              {a.username ?? "—"}
+              <Text style={ui.meta}>  {ago(c.at)}</Text>
+            </Text>
+            <Text style={s.cmtText}>{c.content}</Text>
+          </View>
+          <View style={s.cmtActions}>
+            <Pressable onPress={() => startReply(c)} hitSlop={8}>
+              <Text style={s.cmtAct}>{t("reply")}</Text>
+            </Pressable>
+            {(c.userId === com.me || mine) && (
+              <Pressable onPress={() => com.removeComment(c.id)} hitSlop={8}>
+                <Text style={s.cmtAct}>{t("deletePost")}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -244,26 +285,34 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
       </View>
       {open && (
         <View style={{ marginTop: 10 }}>
-          {post.comments.map((c) => {
-            const a = com.card(c.userId);
-            return (
-              <View key={c.id} style={s.cmtRow}>
-                <Avatar name={a.username} uri={a.avatar_url} seed={c.userId} size={28} onPress={() => openPerson(c.userId)} />
-                <View style={s.cmtBubble}>
-                  <Text style={s.cmtName}>
-                    {a.username ?? "—"}
-                    <Text style={ui.meta}>  {ago(c.at)}</Text>
-                  </Text>
-                  <Text style={s.cmtText}>{c.content}</Text>
-                </View>
-              </View>
-            );
-          })}
+          {topLevel.map((c) => (
+            <View key={c.id}>
+              {renderComment(c, false)}
+              {repliesOf(c.id).map((r) => renderComment(r, true))}
+            </View>
+          ))}
+          {!!replyTo && (
+            <View style={s.replyBar}>
+              <Text style={s.replyBarText} numberOfLines={1}>
+                {t("replyingTo", { name: replyTo.name })}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setReplyTo(null);
+                  setText("");
+                }}
+                hitSlop={10}
+                accessibilityLabel="cancel reply"
+              >
+                <Icon name="close" size={13} color={COLORS.sageDark} />
+              </Pressable>
+            </View>
+          )}
           <View style={s.cmtInputRow}>
             <TextInput
               value={text}
               onChangeText={setText}
-              placeholder={t("commentPh")}
+              placeholder={t(replyTo ? "replyPh" : "commentPh")}
               placeholderTextColor="#C9B3BA"
               style={s.cmtInput}
               maxLength={300}
@@ -357,7 +406,22 @@ const s = StyleSheet.create({
   actOn: { backgroundColor: COLORS.roseBg },
   actText: { fontFamily: FONTS.bodyBold, fontSize: 12, color: COLORS.sageDark },
   cmtRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
-  cmtBubble: { flex: 1, marginLeft: 8, backgroundColor: COLORS.bg, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  replyRow: { marginLeft: 36 },
+  cmtBubble: { marginLeft: 8, backgroundColor: COLORS.bg, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  cmtActions: { flexDirection: "row", gap: 16, marginLeft: 20, marginTop: 3 },
+  cmtAct: { fontFamily: FONTS.bodyBold, fontSize: 11, color: COLORS.sageDark },
+  replyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.greenSoft,
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  replyBarText: { flex: 1, fontFamily: FONTS.body, fontSize: 12, color: COLORS.sageDark, marginRight: 8 },
   cmtName: { fontFamily: FONTS.bodyBold, fontSize: 12, color: COLORS.text },
   cmtText: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.text, marginTop: 2, lineHeight: 19 },
   cmtInputRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
