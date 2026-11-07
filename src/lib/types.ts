@@ -16,7 +16,6 @@ export type Clip = {
   url: string;
   catEn: string;
   catTh: string;
-  emoji: string;
   mine: boolean; // ผู้ใช้เพิ่มเอง
   pct: number | null; // พลังงานตอนที่ผู้ใช้เพิ่มคลิปนี้
 };

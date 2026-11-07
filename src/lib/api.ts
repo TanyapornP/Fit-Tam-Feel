@@ -35,7 +35,6 @@ type ClipRow = {
   youtube_url: string;
   workout_type: string | null;
   workout_type_th: string | null;
-  emoji: string | null;
   created_by: string | null;
   user_energy_percent: number | null;
   energy_table: { name: LevelKey } | null;
@@ -54,13 +53,12 @@ const toClip = (r: ClipRow): Clip => ({
   url: r.youtube_url,
   catEn: r.workout_type ?? "",
   catTh: r.workout_type_th ?? "",
-  emoji: r.emoji ?? "💚",
   mine: r.created_by != null,
   pct: r.user_energy_percent,
 });
 
 const CLIP_COLS =
-  "id, code, mode, title, channel, duration_minutes, view_count, youtube_url, workout_type, workout_type_th, emoji, created_by, user_energy_percent, energy_table(name)";
+  "id, code, mode, title, channel, duration_minutes, view_count, youtube_url, workout_type, workout_type_th, created_by, user_energy_percent, energy_table(name)";
 
 /** คลิปกลาง + คลิปที่ฉันเพิ่มเอง (RLS กรองให้แล้ว) */
 export async function fetchClips(): Promise<Clip[]> {
@@ -84,7 +82,6 @@ export async function addOwnClip(
         video_url: "https://www.youtube.com/embed/" + input.vid,
         category_id: levels[input.level],
         mode: input.mode,
-        emoji: "💚",
         created_by: uid,
         user_energy_percent: input.pct,
       })
