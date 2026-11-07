@@ -16,8 +16,12 @@ DX212 Mobile Programming · ภาค 1/2569 · ทีม **tubtimfangfangjulieI
 - **Must story:** เลื่อนแถบพลังงาน 0–100% → ได้คลิป YouTube ที่ตรงกับพลังงาน (5 ระดับ ช่วงละ 20%) · โหมดออกกำลังกาย / เต้น · คลิปทุกอันยอดวิว 1M+
 - กด "ทำแล้ว" → บันทึกลงฐานข้อมูล · ความต่อเนื่อง (streak) · หมุนเวียนคลิปไม่ให้ซ้ำ
 - โปรไฟล์ · สถิติ · ประวัติ + จำนวนครั้งที่เล่น · เปลี่ยนรูปโปรไฟล์
-- ชุมชน: โพสต์ · ติดตาม · เป็นกำลังใจ · คอมเมนต์ · การแจ้งเตือน
+- ชุมชน: โพสต์ (ถ่ายรูป/เลือกจากคลังภาพ) · ติดตาม · ค้นหาเพื่อนจากชื่อ · เป็นกำลังใจ · คอมเมนต์ + ตอบกลับ · กดขยายรูป · การแจ้งเตือน
+- แกลเลอรีเซลฟี่หลังออกกำลังกาย (ส่วนตัว) · ลบบัญชีในแอป
+- สมัคร/เข้าสู่ระบบด้วยอีเมล หรือ Google
 - ภาษาไทย / อังกฤษ
+
+**เว็บที่ deploy แล้ว:** https://fit-tam-feel.vercel.app · คลังคลิปกลาง 352 คลิป (ออกกำลังกาย 300 + เต้น 52)
 
 ## เริ่มใช้งาน
 
@@ -54,7 +58,7 @@ src/
 ├── app/                      ← หน้าจอ (1 ไฟล์ = 1 หน้า)
 │   ├── _layout.tsx           ← ฟอนต์ + Provider + พาไปหน้าที่ถูก (login / onboarding / แท็บ)
 │   ├── login.tsx             ← สมัคร / เข้าสู่ระบบ (Supabase Auth)
-│   ├── onboarding.tsx        ← ตั้งค่าครั้งแรก 6 ขั้น
+│   ├── onboarding.tsx        ← ตั้งค่าครั้งแรก 4 ขั้น
 │   ├── (tabs)/
 │   │   ├── _layout.tsx       ← แท็บล่าง 🏠 🌸 👤
 │   │   ├── index.tsx         ← หน้าหลัก: แถบแบต + คลิปแนะนำ + ทำแล้ว
@@ -82,7 +86,7 @@ src/
 แอป Expo (iOS / Android / เว็บ)
    │  supabase-js + publishable key
    ▼
-Supabase ── Auth (อีเมล + รหัสผ่าน)
+Supabase ── Auth (อีเมล + รหัสผ่าน · Google)
         ├── Postgres + RLS ── profile · public_profile · energy_table · workout_clip
         │                     user_did_it · posts · follows · post_likes · post_comments · notifications
         └── Storage ───────── avatars · post-images · selfies
