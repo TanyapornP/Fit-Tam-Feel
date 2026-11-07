@@ -21,6 +21,7 @@ const ICONS = {
   comment: ["bubble.left.fill", "chat_bubble"],
   star: ["star.fill", "star"],
   play: ["play.fill", "play_arrow"],
+  search: ["magnifyingglass", "search"],
 } as const satisfies Record<string, readonly [SFSymbol, AndroidSymbol]>;
 
 export type IconName = keyof typeof ICONS;
