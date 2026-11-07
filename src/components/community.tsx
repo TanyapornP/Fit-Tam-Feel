@@ -1,8 +1,8 @@
 // ชิ้นส่วนหน้าชุมชน: ปุ่มติดตาม, ช่องโพสต์, การ์ดโพสต์
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useData } from "../lib/DataContext";
 import { useT } from "../lib/i18n";
@@ -128,6 +128,39 @@ function Chip({ on, onPress, label }: { on: boolean; onPress: () => void; label:
   );
 }
 
+/** รูปในโพสต์: สัดส่วนตามรูปจริง (จำกัด 4:5 – 16:9) กดแล้วขยายเต็มจอ */
+function PostImage({ uri }: { uri: string }) {
+  const [ratio, setRatio] = useState(4 / 3);
+  const [big, setBig] = useState(false);
+  useEffect(() => {
+    Image.getSize(
+      uri,
+      (w, h) => {
+        if (w > 0 && h > 0) setRatio(Math.min(1.78, Math.max(0.8, w / h)));
+      },
+      () => {},
+    );
+  }, [uri]);
+  return (
+    <>
+      <Pressable onPress={() => setBig(true)} accessibilityRole="imagebutton" style={s.postPhotoWrap}>
+        <Image source={{ uri }} style={[s.postPhoto, { aspectRatio: ratio }]} resizeMode="cover" />
+        <View style={s.zoomHint}>
+          <Icon name="search" size={14} color={COLORS.white} />
+        </View>
+      </Pressable>
+      <Modal visible={big} transparent animationType="fade" onRequestClose={() => setBig(false)}>
+        <Pressable style={s.viewer} onPress={() => setBig(false)}>
+          <Image source={{ uri }} style={s.viewerImg} resizeMode="contain" />
+          <Pressable onPress={() => setBig(false)} style={s.viewerClose} accessibilityLabel="close">
+            <Icon name="close" size={22} color={COLORS.white} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 /** โพสต์ 1 อัน: เป็นกำลังใจ / คอมเมนต์ / ติดตาม / ลบโพสต์ของตัวเอง */
 export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; com: Community; clipsById: Record<string, Clip>; initialOpen?: boolean }) {
   const { t } = useT();
@@ -169,7 +202,7 @@ export function PostCard({ post, com, clipsById, initialOpen }: { post: Post; co
         )}
       </View>
       {!!post.content && <Text style={s.postText}>{post.content}</Text>}
-      {!!post.imageUrl && <Image source={{ uri: post.imageUrl }} style={s.postImg} resizeMode="cover" />}
+      {!!post.imageUrl && <PostImage uri={post.imageUrl} />}
       {!!clip && (
         <Pressable style={s.postClip} onPress={() => Linking.openURL(clip.url)}>
           <Image source={{ uri: `https://img.youtube.com/vi/${clip.vid}/mqdefault.jpg` }} style={s.postClipImg} />
@@ -299,6 +332,12 @@ const s = StyleSheet.create({
   postHead: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   postText: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.text, lineHeight: 22 },
   postImg: { width: "100%", height: 220, borderRadius: 16, marginTop: 10, backgroundColor: COLORS.pink },
+  postPhotoWrap: { marginTop: 10, borderRadius: 16, overflow: "hidden", backgroundColor: COLORS.pink },
+  postPhoto: { width: "100%" },
+  zoomHint: { position: "absolute", right: 10, bottom: 10, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 999, padding: 7 },
+  viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  viewerImg: { width: "100%", height: "100%" },
+  viewerClose: { position: "absolute", top: 24, right: 20, backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 999, padding: 10 },
   postClip: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.greenSoft, borderRadius: 16, padding: 8, marginTop: 10 },
   postClipImg: { width: 88, height: 50, borderRadius: 10, backgroundColor: COLORS.pink },
   postClipTitle: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.text },

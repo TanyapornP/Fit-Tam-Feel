@@ -38,6 +38,8 @@ function AuthGate() {
       {loading ? (
         <LoadingView />
       ) : (
+        // บนจอกว้าง (คอม/แท็บเล็ต) จำกัดความกว้างเป็นคอลัมน์กลางแบบมือถือ ไม่ให้ยืดเต็มจอ
+        <View style={{ flex: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}>
         <ThemeProvider value={CLEAR_THEME}>
           <Stack screenLayout={focusOnlyLayout} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
             <Stack.Screen name="(tabs)" />
@@ -48,6 +50,7 @@ function AuthGate() {
             <Stack.Screen name="people/[id]" />
           </Stack>
         </ThemeProvider>
+        </View>
       )}
     </View>
   );
