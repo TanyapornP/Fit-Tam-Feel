@@ -13,7 +13,7 @@ DX212 Mobile Programming · ภาค 1/2569 · ทีม **tubtimfangfangjulieI
 
 ## ฟีเจอร์
 
-- **Must story:** เลื่อนแถบพลังงาน 0–100% → ได้คลิป YouTube ที่ตรงกับพลังงาน (5 ระดับ ช่วงละ 20%) · โหมด 🏋️ ออกกำลังกาย / 💃 เต้น · คลิปทุกอันยอดวิว 1M+
+- **Must story:** เลื่อนแถบพลังงาน 0–100% → ได้คลิป YouTube ที่ตรงกับพลังงาน (5 ระดับ ช่วงละ 20%) · โหมดออกกำลังกาย / เต้น · คลิปทุกอันยอดวิว 1M+
 - กด "ทำแล้ว" → บันทึกลงฐานข้อมูล · ความต่อเนื่อง (streak) · หมุนเวียนคลิปไม่ให้ซ้ำ
 - โปรไฟล์ · สถิติ · ประวัติ + จำนวนครั้งที่เล่น · เปลี่ยนรูปโปรไฟล์
 - ชุมชน: โพสต์ · ติดตาม · เป็นกำลังใจ · คอมเมนต์ · การแจ้งเตือน
@@ -107,6 +107,18 @@ Supabase ── Auth (อีเมล + รหัสผ่าน)
 create policy "user_did_it: read own" on public.user_did_it
   for select to authenticated using (user_id = (select auth.uid()));
 ```
+
+## Deploy เว็บบน Vercel
+
+เว็บ build จาก Expo (`expo export --platform web`) ตามค่าใน `vercel.json` — push ขึ้น GitHub แล้ว Vercel จะ build และ deploy ให้เอง
+
+1. Vercel → Add New Project → เลือก repo นี้ (ค่า build อ่านจาก `vercel.json` ไม่ต้องแก้)
+2. ตั้ง Environment Variables ให้ครบทั้ง Production และ Preview
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (publishable key ใช้ฝั่ง client ได้ ความปลอดภัยอยู่ที่ RLS)
+3. ได้ URL แล้ว (เช่น `https://fit-tam-feel.vercel.app`) ไปเพิ่มที่
+   - Supabase → Authentication → URL Configuration → **Redirect URLs** (`https://<โดเมน>/**`)
+   - Google Cloud → OAuth client → **Authorized JavaScript origins** (เฉพาะถ้าเปิด Google sign-in)
 
 ## ปัญหาที่พบบ่อย
 
