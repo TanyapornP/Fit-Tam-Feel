@@ -86,9 +86,9 @@ export const seedRand = (str: string) => {
  */
 export function orderClips(
   list: Clip[],
-  opts: { today: string; stats: Record<string, PlayStat>; prefMins: number[]; rot: number },
+  opts: { today: string; stats: Record<string, PlayStat>; prefMins: number[]; rot: number; battery?: number },
 ) {
-  const { today, stats, prefMins, rot } = opts;
+  const { today, stats, prefMins, rot, battery } = opts;
   const fitsPref = (m: number) => !prefMins.length || prefMins.some((p) => Math.abs(p - m) <= 3);
   const fresh = (c: Clip) => !stats[c.id] || stats[c.id].last > 2;
   const score = (c: Clip) => {
@@ -99,6 +99,8 @@ export function orderClips(
       sc += st.last === 0 ? 1000 : st.last <= 2 ? 100 : st.last <= 6 ? 25 : 0;
     }
     if (!fitsPref(c.min)) sc += 6;
+    // ละเอียดกว่า 5 ระดับ: คลิปที่ % ใกล้แบตตอนนี้ขึ้นก่อน (เช่น 22% ได้คลิปเบากว่า 38% ในระดับเดียวกัน)
+    if (battery != null && c.pct != null) sc += Math.abs(battery - c.pct) * 0.7;
     return sc;
   };
   const sorted = [...list].sort((a, b) => score(a) - score(b));

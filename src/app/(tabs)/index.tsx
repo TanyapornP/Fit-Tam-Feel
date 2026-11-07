@@ -47,7 +47,7 @@ export default function Home() {
   const order = (key: string) =>
     orderClips(
       pool.filter((c) => c.energy === key),
-      { today: d.today, stats: d.stats, prefMins, rot: d.rot[d.mode + ":" + key] ?? 0 },
+      { today: d.today, stats: d.stats, prefMins, rot: d.rot[d.mode + ":" + key] ?? 0, battery: d.battery },
     );
   const sameLevel = order(tier);
   const best = sameLevel[0];
