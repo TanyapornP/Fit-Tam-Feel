@@ -1,4 +1,5 @@
 // ชิ้นส่วนเล็ก ๆ ที่ใช้ซ้ำ: ปุ่ม, ช่องกรอก, ปุ่มตัวเลือก, หน้าโหลด/ผิดพลาด, สลับภาษา
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -30,6 +31,30 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
     <View style={{ marginBottom: 14 }}>
       <Text style={ui.label}>{label}</Text>
       <TextInput placeholderTextColor="#C9B3BA" style={s.input} autoCapitalize="none" {...props} />
+    </View>
+  );
+}
+
+/** ช่องรหัสผ่าน + ปุ่ม "แสดง/ซ่อน" ให้ตรวจว่าพิมพ์ถูกไหม */
+export function PasswordField({ label, ...props }: { label: string } & TextInputProps) {
+  const { t } = useT();
+  const [show, setShow] = useState(false);
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={ui.label}>{label}</Text>
+      <View style={s.pwRow}>
+        <TextInput
+          placeholderTextColor="#C9B3BA"
+          style={[s.input, { flex: 1, borderWidth: 0, backgroundColor: "transparent" }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+          {...props}
+          secureTextEntry={!show}
+        />
+        <Pressable onPress={() => setShow(!show)} hitSlop={10} style={s.pwToggle} accessibilityRole="button" accessibilityLabel={t(show ? "hidePw" : "showPw")}>
+          <Text style={s.pwToggleText}>{t(show ? "hidePw" : "showPw")}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -128,6 +153,17 @@ const s = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONTS.body,
   },
+  pwRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.bg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    paddingRight: 14,
+  },
+  pwToggle: { paddingLeft: 8 },
+  pwToggleText: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.sageDark },
   chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 6 },
   chip: {
     paddingVertical: 9,

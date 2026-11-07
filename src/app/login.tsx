@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Btn, Field, LangToggle } from "../components/ui";
+import { Btn, Field, LangToggle, PasswordField } from "../components/ui";
 import { useT } from "../lib/i18n";
 import { ui } from "../lib/styles";
 import { supabase } from "../lib/supabase";
@@ -22,12 +22,25 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
 
+  // แปลงข้อความ error ของ Supabase เป็นข้อความที่บอกว่าต้องทำอะไรต่อ
+  // (Supabase ตั้งใจไม่บอกว่า "อีเมลผิด" หรือ "รหัสผ่านผิด" แยกกัน เพื่อกันคนเดาอีเมลของคนอื่น)
+  const authError = (msg: string) => {
+    if (/not confirmed/i.test(msg)) return t("errUnconfirmed");
+    if (/invalid.*credentials|invalid login/i.test(msg)) return t("errLogin");
+    if (/rate limit|too many/i.test(msg)) return t("errRate");
+    if (/fetch|network/i.test(msg)) return t("errNet");
+    return msg;
+  };
+
   const submit = async () => {
     const mail = email.trim().toLowerCase();
     setErr("");
     setInfo("");
-    if (mode === "signup" && (!name.trim() || !mail.includes("@") || pw.length < 6)) return setErr(t("errSignup"));
-    if (mode === "login" && (!mail.includes("@") || !pw)) return setErr(t("errLogin"));
+    // เช็กทีละช่อง จะได้บอกได้ว่าผิดตรงไหน
+    if (mode === "signup" && !name.trim()) return setErr(t("errName"));
+    if (!mail.includes("@")) return setErr(t("errEmail"));
+    if (!pw) return setErr(t("errPw"));
+    if (mode === "signup" && pw.length < 6) return setErr(t("errPwShort"));
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -36,7 +49,7 @@ export default function Login() {
           password: pw,
           options: { data: { name: name.trim() } }, // trigger ในฐานข้อมูลใช้ชื่อนี้สร้าง profile
         });
-        if (error) return setErr(/registered|exists/i.test(error.message) ? t("errExists") : error.message);
+        if (error) return setErr(/registered|exists/i.test(error.message) ? t("errExists") : authError(error.message));
         // ถ้าเปิด "Confirm email" ไว้ใน Supabase จะยังไม่มี session จนกว่าจะกดลิงก์ในอีเมล
         if (!data.session) {
           setInfo(t("checkEmail"));
@@ -44,9 +57,11 @@ export default function Login() {
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: mail, password: pw });
-        if (error) setErr(/invalid/i.test(error.message) ? t("errLogin") : error.message);
+        if (error) setErr(authError(error.message));
       }
       // สำเร็จ → AuthGate ใน _layout.tsx พาไปหน้าถัดไปเอง
+    } catch {
+      setErr(t("errNet")); // เช่น ไม่มีอินเทอร์เน็ต
     } finally {
       setBusy(false);
     }
@@ -114,7 +129,7 @@ export default function Login() {
               <Field label={t("yourName")} value={name} onChangeText={setName} placeholder={t("namePh")} autoCapitalize="words" />
             )}
             <Field label={t("email")} value={email} onChangeText={setEmail} placeholder={t("emailPh")} keyboardType="email-address" />
-            <Field label={t("password")} value={pw} onChangeText={setPw} placeholder="••••••" secureTextEntry />
+            <PasswordField label={t("password")} value={pw} onChangeText={setPw} placeholder="••••••" onSubmitEditing={submit} />
             {!!err && <Text style={ui.err}>{err}</Text>}
             {!!info && <Text style={s.info}>{info}</Text>}
             <Btn label={mode === "signup" ? t("create") : t("lockIn")} onPress={submit} busy={busy} />
