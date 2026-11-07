@@ -43,16 +43,18 @@ type CardProps = {
   small?: boolean;
   doneToday?: boolean;
   onDone?: () => void;
+  onRemove?: () => void;
   plays?: number;
 };
 
-export function ClipCard({ clip, best, small, doneToday, onDone, plays = 0 }: CardProps) {
+export function ClipCard({ clip, best, small, doneToday, onDone, onRemove, plays = 0 }: CardProps) {
   const { t, lang } = useT();
   const open = () => Linking.openURL(clip.url);
   const cat = lang === "th" ? clip.catTh || clip.catEn : clip.catEn;
   const tag = clip.mine ? t("myTag") : clip.views ? t("views", { n: fmtViews(clip.views) }) : "";
   return (
-    <View style={[s.clip, best && s.clipBest]}>
+    // small = การ์ดในแถวเลื่อนแนวนอน: ยืดให้สูงเท่ากันทั้งแถว แล้วดันปุ่มไปไว้ล่างสุด
+    <View style={[s.clip, best && s.clipBest, small && { flex: 1 }]}>
       <Pressable onPress={open}>
         <Cover clip={clip} height={best ? 190 : small ? 130 : 150} />
         <View style={s.playBadge} pointerEvents="none">
@@ -68,9 +70,9 @@ export function ClipCard({ clip, best, small, doneToday, onDone, plays = 0 }: Ca
           <Text style={s.minPillText}>{t("min", { n: clip.min })}</Text>
         </View>
       </Pressable>
-      <View style={{ padding: small ? 12 : 14 }}>
+      <View style={{ padding: small ? 12 : 14, flex: small ? 1 : undefined }}>
         {best && <Text style={s.bestTag}>{t("best")}</Text>}
-        <Text style={[s.title, small && { fontSize: 14 }]} numberOfLines={small ? 2 : undefined}>
+        <Text style={[s.title, small && s.titleSmall]} numberOfLines={small ? 2 : undefined}>
           {clip.title}
         </Text>
         <Text style={s.meta} numberOfLines={1}>
@@ -79,7 +81,8 @@ export function ClipCard({ clip, best, small, doneToday, onDone, plays = 0 }: Ca
         </Text>
         {!!tag && <Text style={s.meta}>{tag}</Text>}
         {plays > 0 && <Text style={s.plays}>{t("playedN", { n: plays })}</Text>}
-        <View style={{ flexDirection: "row", marginTop: 12 }}>
+        <View style={{ flex: small ? 1 : 0, minHeight: 12 }} />
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Pressable style={s.play} onPress={open}>
             <Text style={s.playText}>{small ? t("watchShort") : t("watch")}</Text>
           </Pressable>
@@ -93,6 +96,11 @@ export function ClipCard({ clip, best, small, doneToday, onDone, plays = 0 }: Ca
                 <Text style={s.doneText}>{t("did")}</Text>
               </Pressable>
             )
+          )}
+          {onRemove && (
+            <Pressable onPress={onRemove} style={{ marginLeft: "auto", paddingLeft: 8 }} hitSlop={8}>
+              <Text style={ui.link}>{t("removeClip")}</Text>
+            </Pressable>
           )}
         </View>
       </View>
@@ -129,23 +137,22 @@ export function ClipRow({ title, items, todayIds, onDone, plays, onRemove, match
         horizontal
         showsHorizontalScrollIndicator={false}
         style={{ marginHorizontal: -20 }}
-        contentContainerStyle={{ paddingHorizontal: 20, alignItems: "flex-start" }}
+        contentContainerStyle={{ paddingHorizontal: 20, alignItems: "stretch" }}
       >
         {items.map((c) => (
           <View key={c.id} style={{ width: 240, marginRight: 12 }}>
-            {matchKey && c.energy === matchKey && <Text style={s.bestTag}>{t("matchNow")}</Text>}
+            {/* เว้นที่ป้ายไว้ทุกใบ การ์ดในแถวจะได้เริ่มที่ความสูงเดียวกัน */}
+            {!!matchKey && (
+              <Text style={[s.bestTag, c.energy !== matchKey && { opacity: 0 }]}>{t("matchNow")}</Text>
+            )}
             <ClipCard
               clip={c}
               small
               plays={plays(c)}
               doneToday={todayIds.includes(c.id)}
               onDone={() => onDone(c)}
+              onRemove={onRemove ? () => onRemove(c) : undefined}
             />
-            {onRemove && (
-              <Pressable onPress={() => onRemove(c)} style={{ alignSelf: "flex-end", marginTop: -6 }}>
-                <Text style={ui.link}>{t("removeClip")}</Text>
-              </Pressable>
-            )}
           </View>
         ))}
       </ScrollView>
@@ -197,6 +204,7 @@ const s = StyleSheet.create({
   minPillText: { color: COLORS.white, fontSize: 11, fontWeight: "700" },
   bestTag: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1, color: COLORS.sageDark, marginBottom: 6 },
   title: { fontFamily: FONTS.head, fontSize: 16, color: COLORS.text },
+  titleSmall: { fontSize: 14, lineHeight: 22, minHeight: 44 }, // จองที่ 2 บรรทัดเสมอ
   meta: { fontFamily: FONTS.body, color: COLORS.sub, fontSize: 12, marginTop: 4 },
   plays: { fontFamily: FONTS.bodyBold, fontSize: 11, color: COLORS.rose, marginTop: 4 },
   play: { backgroundColor: COLORS.sage, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 16, marginRight: 8 },
