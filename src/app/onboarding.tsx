@@ -104,7 +104,7 @@ export default function Onboarding() {
               </View>
               <Text style={[ui.rowHint, { marginTop: 8 }]}>{photoBusy ? t("uploading") : t("photoOpt")}</Text>
             </View>
-            <Field label={t("nick")} value={a.nick} onChangeText={set("nick")} autoCapitalize="words" />
+            <Field label={t("nick")} value={a.nick} onChangeText={set("nick")} autoCapitalize="words" maxLength={30} />
             <Text style={ui.label}>{t("dobQ")}</Text>
             <TextInput
               style={s.yob}

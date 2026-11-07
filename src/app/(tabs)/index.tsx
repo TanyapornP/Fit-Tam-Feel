@@ -25,6 +25,7 @@ export default function Home() {
   const [adding, setAdding] = useState(false);
   const [lastSettled, setLastSettled] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   if (d.loading && !d.clips.length) return <LoadingView />;
 
@@ -63,12 +64,18 @@ export default function Home() {
     setLastSettled(k);
   };
 
+  // กันกดซ้ำระหว่างรอบันทึก + แปลง error จากฐานข้อมูลเป็นข้อความที่ผู้ใช้อ่านเข้าใจ
   const run = async (fn: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
     try {
       setActionErr("");
       await fn();
     } catch (e) {
-      setActionErr(t("saveFail") + " (" + (e as Error).message + ")");
+      const msg = (e as Error).message;
+      setActionErr(/duplicate|unique/i.test(msg) ? t("dupDone") : t("saveFail"));
+    } finally {
+      setBusy(false);
     }
   };
 

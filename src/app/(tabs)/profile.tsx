@@ -134,7 +134,7 @@ export default function ProfileScreen() {
           <Text style={[ui.rowHint, { marginBottom: 6 }]}>{t("changePhoto")}</Text>
           {editing ? (
             <View style={{ width: "100%" }}>
-              <Field label={t("nick")} value={a.nick} onChangeText={set("nick")} autoCapitalize="words" />
+              <Field label={t("nick")} value={a.nick} onChangeText={set("nick")} autoCapitalize="words" maxLength={30} />
               <Field
                 label={t("bio")}
                 value={a.bio}

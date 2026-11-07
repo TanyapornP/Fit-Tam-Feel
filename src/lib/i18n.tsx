@@ -7,7 +7,7 @@ const en = {
   lockSub: "Just 5 minutes of stretching on your bed still counts as a win.",
   madeWith: "Made with care",
   back: "‹ Back", cont: "Continue", skip: "Skip", save: "Save", cancel: "Cancel",
-  loading: "Loading…", loadFail: "Could not load data.", retry: "Try again", saveFail: "Could not save. Please try again.",
+  loading: "Loading…", loadFail: "Could not load data.", retry: "Try again", saveFail: "Could not save. Please try again.", dupDone: "You already logged this clip today — try another one!",
   language: "Language",
 
   signup: "Sign up", login: "Log in", yourName: "Your name", namePh: "Your name",
@@ -114,7 +114,7 @@ const th: Record<TKey, string> = {
   lockSub: "แค่ยืดเหยียด 5 นาทีบนเตียง ก็นับว่าสำเร็จแล้วนะ",
   madeWith: "ทำด้วยความใส่ใจ",
   back: "‹ ย้อนกลับ", cont: "ต่อไป", skip: "ข้าม", save: "บันทึก", cancel: "ยกเลิก",
-  loading: "กำลังโหลด…", loadFail: "โหลดข้อมูลไม่สำเร็จ", retry: "ลองใหม่", saveFail: "บันทึกไม่สำเร็จ ลองใหม่อีกครั้งนะ",
+  loading: "กำลังโหลด…", loadFail: "โหลดข้อมูลไม่สำเร็จ", retry: "ลองใหม่", saveFail: "บันทึกไม่สำเร็จ ลองใหม่อีกครั้งนะ", dupDone: "วันนี้บันทึกคลิปนี้ไปแล้ว ลองคลิปอื่นดูนะ",
   language: "ภาษา",
 
   signup: "สมัครสมาชิก", login: "เข้าสู่ระบบ", yourName: "ชื่อของคุณ", namePh: "ชื่อของคุณ",
