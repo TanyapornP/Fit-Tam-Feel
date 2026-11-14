@@ -25,6 +25,7 @@ export type LogEntry = {
   id: string;
   clipId: string | null;
   title: string;
+  clipUrl: string | null; // ลิงก์ YouTube ของคลิปที่ทำ (null ถ้าคลิปถูกลบแล้ว)
   min: number;
   energy: LevelKey | null;
   battery: number;

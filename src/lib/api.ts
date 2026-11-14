@@ -104,13 +104,14 @@ type LogRow = {
   completed_date: string;
   completed_at: string;
   selfie_url: string | null;
-  workout_clip: { title: string; energy_table: { name: LevelKey } | null } | null;
+  workout_clip: { title: string; youtube_url: string | null; energy_table: { name: LevelKey } | null } | null;
 };
 
 const toLog = (r: LogRow): LogEntry => ({
   id: r.id,
   clipId: r.clip_id,
   title: r.workout_clip?.title ?? "—",
+  clipUrl: r.workout_clip?.youtube_url ?? null,
   min: r.duration_minutes ?? 0,
   energy: r.workout_clip?.energy_table?.name ?? null,
   battery: r.battery_level,
@@ -119,7 +120,7 @@ const toLog = (r: LogRow): LogEntry => ({
   selfie: r.selfie_url,
 });
 
-const LOG_COLS = "id, clip_id, battery_level, duration_minutes, completed_date, completed_at, selfie_url, workout_clip(title, energy_table(name))";
+const LOG_COLS = "id, clip_id, battery_level, duration_minutes, completed_date, completed_at, selfie_url, workout_clip(title, youtube_url, energy_table(name))";
 
 export async function fetchLogs(): Promise<LogEntry[]> {
   const rows = must(

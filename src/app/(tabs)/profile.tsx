@@ -1,7 +1,7 @@
 // หน้าโปรไฟล์: รูป · สถิติ · เป้าหมายสัปดาห์ · พลังงาน · คลิปที่เล่นบ่อย · ประวัติ · ความชอบ · ตั้งค่า
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Avatar from "../../components/Avatar";
@@ -18,6 +18,8 @@ import { photoErrorText, pickPhoto, type PhotoSource } from "../../lib/photo";
 import { ui } from "../../lib/styles";
 import { supabase } from "../../lib/supabase";
 import { COLORS, FONTS } from "../../lib/theme";
+
+const HIST_PREVIEW = 3; // จำนวนรายการประวัติที่โชว์ก่อนกด "ดูเพิ่ม"
 
 function Stat({ n, l, onPress }: { n: number | string; l: string; onPress?: () => void }) {
   const body = (
@@ -40,6 +42,7 @@ export default function ProfileScreen() {
   const [counts, setCounts] = useState({ posts: 0, followers: 0, following: 0 });
   const [sheet, setSheet] = useState(false); // แผ่นเลือกกล้อง/คลังภาพ
   const [confirmDel, setConfirmDel] = useState(false);
+  const [histOpen, setHistOpen] = useState(false); // ประวัติ: ย่อไว้ 3 รายการ กดดูเพิ่มได้
 
   // จำนวนโพสต์ / ผู้ติดตาม / กำลังติดตาม (นับในฐานข้อมูล ไม่ต้องดึงข้อมูลทั้งหมด)
   useFocusEffect(
@@ -264,13 +267,25 @@ export default function ProfileScreen() {
           {logs.length === 0 ? (
             <Text style={ui.p2}>{t("noHistory")}</Text>
           ) : (
-            logs.slice(0, 15).map((e) => (
+            logs.slice(0, histOpen ? 30 : HIST_PREVIEW).map((e) => (
               <View key={e.id} style={s.histRow}>
                 <Text style={s.histDate}>{dateLabel(e.day)}</Text>
                 <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={s.histTitle} numberOfLines={1}>
-                    {e.title}
-                  </Text>
+                  {e.clipUrl ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(e.clipUrl as string)}
+                      accessibilityRole="link"
+                      accessibilityLabel={`${t("openClip")}: ${e.title}`}
+                    >
+                      <Text style={[s.histTitle, s.histLink]} numberOfLines={1}>
+                        {e.title} ↗
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={s.histTitle} numberOfLines={1}>
+                      {e.title}
+                    </Text>
+                  )}
                   {!!e.clipId && !!nth[e.id] && (
                     <Text style={s.plays}>
                       {t("nthTime", { n: nth[e.id] })} · {t("playedN", { n: stats[e.clipId]?.count ?? 1 })}
@@ -282,6 +297,17 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             ))
+          )}
+          {logs.length > HIST_PREVIEW && (
+            <Pressable
+              onPress={() => setHistOpen(!histOpen)}
+              style={[ui.pill, { alignSelf: "center", marginTop: 8 }]}
+              accessibilityRole="button"
+            >
+              <Text style={ui.link}>
+                {histOpen ? t("histLess") : t("histMore", { n: Math.min(logs.length, 30) - HIST_PREVIEW })}
+              </Text>
+            </Pressable>
           )}
         </View>
 
@@ -425,6 +451,7 @@ const s = StyleSheet.create({
   histRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.pink },
   histDate: { fontFamily: FONTS.bodyBold, fontSize: 12, color: COLORS.sageDark, width: 64 },
   histTitle: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.text },
+  histLink: { textDecorationLine: "underline" },
   plays: { fontFamily: FONTS.bodyBold, fontSize: 11, color: COLORS.rose, marginTop: 3 },
   rank: { fontFamily: FONTS.head, fontSize: 16, color: COLORS.sage, width: 28 },
   countPill: { backgroundColor: COLORS.roseBg, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
